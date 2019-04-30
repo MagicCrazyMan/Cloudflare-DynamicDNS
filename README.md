@@ -33,7 +33,7 @@
 <h3>命令行参数</h3>
 <ul>
   <li>-c,--config <FILE></br>指定配置文件,默认为当前目录的config.json</li>
-  <li>-b,--baidu</br>使用<a href="www.baidu.com/s?wd=ip">百度</a>查询网络IP，不建议使用，有可能存在泄漏IP的风险，建议仅在无额外服务器可进行IP查询的情况下使用</li>
+  <li>-b,--baidu</br>使用<a href="http://www.baidu.com/s?wd=ip">百度</a>查询网络IP，不建议使用，有可能存在泄漏IP的风险，建议仅在无额外服务器可进行IP查询的情况下使用</li>
   <li>-j,--json</br>运行配置文件创建工具</li>
   <li>-l,--list</br>运行DNS查询工具并进行配置文件创建</li>
   <li>-h,--help</br>显示所有可用参数</br>
