@@ -1,0 +1,46 @@
+{
+  "remoteIPServer": "url",
+  "defaultSleepSconds": 900,
+  "failedSleepSeconds": 300,
+  "accounts": [
+    {
+      "email": "example1@example1.com",
+      "key": "CloudFlare SecretKey",
+      "domains": [
+        {
+          "nickname": "nickname 1",
+          "domain": "example1.example1.example1",
+          "zone": "CloudFlare DNS Zone",
+          "identifier": "CloudFlare DNS domain identifier",
+          "type": "A",
+          "ttl": 1,
+          "proixed": false
+        }
+      ]
+    },
+    {
+      "email": "example2@example2.com",
+      "key": "CloudFlare SecretKey",
+      "domains": [
+        {
+          "nickname": "nickname 1",
+          "domain": "example1.example1.example1",
+          "zone": "CloudFlare DNS Zone",
+          "identifier": "CloudFlare DNS domain identifier",
+          "type": "A",
+          "ttl": 1,
+          "proixed": false
+        },
+        {
+          "nickname": "nickname 2",
+          "domain": "example2.example2.example2",
+          "zone": "CloudFlare DNS Zone",
+          "identifier": "CloudFlare DNS domain identifier",
+          "type": "A",
+          "ttl": 1,
+          "proixed": false
+        }
+      ]
+    }
+  ]
+}
