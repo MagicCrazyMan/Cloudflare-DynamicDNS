@@ -1,5 +1,5 @@
 # Cloudflare-DynamicDNS
-<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.0.0</strong></p>
+<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.1.0</strong></p>
 <p><i>
   该应用暂时只有<strong>中文</strong>版本！
   </br>
@@ -47,6 +47,7 @@
 </p>
 <pre><code>ConfigurationJson
 |-(String) whereGetYourIP   //全局变量，获取IP的地址
+|-(String) logFileHome    //全局变量，日志文件存放位置
 |-(int) defaultSleepSconds  //全局变量，默认线程休眠的时间，如ip未变更以及ttl为1(Automatic)是
 |-(int) failedSleepSeconds  //全局变量，发生错误后线程休眠的时间，如连接网络失败
 |-(ArrayList<Acccount>) accounts  //含有所有 Cloudflare Account 的 ArrayList
