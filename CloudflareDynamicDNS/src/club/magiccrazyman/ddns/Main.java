@@ -20,7 +20,7 @@ public class Main {
     /**
      * Development version
      */
-    public final static String VERSION = "2.0.0";
+    public final static String VERSION = "2.1.0";
 
     private static String config = "config.json";
     private static boolean isBaidu = false;
@@ -31,9 +31,9 @@ public class Main {
      */
     public static void main(String[] args) {
         CLI(args);
-        
+
         if (start == true) {
-            new DDNS(config, isBaidu).startDDNS();
+            new DDNS(ConfigurationJson.initConfiguration(config, isBaidu)).startDDNS();
         }
     }
 
@@ -77,29 +77,40 @@ public class Main {
             DefaultParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
 
-            if (cmd.hasOption("h") || cmd.hasOption("help")) {
-                String header = "Cloudflare 专用DDNS应用" + System.lineSeparator()
-                        + "使用前请确认网络服务拥有公网IP地址" + System.lineSeparator()
-                        + "请自行保证配置文件的安全，本应用不提供配置文件加密功能" + System.lineSeparator()
-                        + "若Cloudflare DNS密钥泄漏，请迅速前往Cloudflare重置密钥！" + System.lineSeparator();
-                String footer = "如有任何问题，请联系 350088648@qq.com";
-                HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp("Cloudflare DDNS", header, options, footer, true);
-                start = false;
-            } else if (cmd.hasOption("v") || cmd.hasOption("version")) {
-                System.out.println("Cloudflare 专用DDNS服务");
-                System.out.println("    当前版本为 " + VERSION);
-                start = false;
-            } else if (cmd.hasOption("j") || cmd.hasOption("json")) {
-                BuildConfigurationJson.start();
-                start = false;
-            } else if (cmd.hasOption("l") || cmd.hasOption("list")) {
-                ListDNSRecordDetails.start();
-                start = false;
-            } else if (cmd.hasOption("c") || cmd.hasOption("config")) {
-                config = cmd.getOptionValue("c");
-            } else if (cmd.hasOption("b") || cmd.hasOption("baidu")) {
-                isBaidu = true;
+            for (Option op : cmd.getOptions()) {
+                switch (op.getOpt()) {
+                    case "h":
+                        String header = "Cloudflare 专用DDNS应用" + System.lineSeparator()
+                                + "使用前请确认网络服务拥有公网IP地址" + System.lineSeparator()
+                                + "请自行保证配置文件的安全，本应用不提供配置文件加密功能" + System.lineSeparator()
+                                + "若Cloudflare DNS密钥泄漏，请迅速前往Cloudflare重置密钥！" + System.lineSeparator();
+                        String footer = "如有任何问题，请联系 350088648@qq.com";
+                        HelpFormatter formatter = new HelpFormatter();
+                        formatter.printHelp("Cloudflare DDNS", header, options, footer, true);
+                        start = false;
+                        break;
+                    case "v":
+                        System.out.println("Cloudflare 专用DDNS服务");
+                        System.out.println("    当前版本为 " + VERSION);
+                        start = false;
+                        break;
+                    case "j":
+                        BuildConfigurationJson.start();
+                        start = false;
+                        break;
+                    case "l":
+                        ListDNSRecordDetails.start();
+                        start = false;
+                        break;
+                    case "c":
+                        config = cmd.getOptionValue("c");
+                        break;
+                    case "b":
+                        isBaidu = true;
+                        break;
+                    default:
+                        System.out.println("无效命令：" + op.getOpt());
+                }
             }
         } catch (ParseException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);

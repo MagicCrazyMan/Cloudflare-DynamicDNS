@@ -7,7 +7,7 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
-<project name="IPChangeDetectMachine" default="default" basedir=".">
+<project name="CloudflareDynamicDNS" default="default" basedir=".">
     <description>Builds, tests, and runs the project DDNS</description>
     <import file="nbproject/build-impl.xml"/>
     <!--
@@ -70,13 +70,15 @@
     nbproject/build-impl.xml file. 
 
     -->
-        <target name="-post-jar"> 
-        <jar destfile="./dist/DDNS-2.0.0.jar"> 
+    <target name="-post-jar"> 
+        <jar destfile="./dist/CloudflareDynamicDNS-2.1.0-Java_1.8.1_191.jar"> 
             <zipgroupfileset dir="dist/lib" includes="*.jar"/>  
             <zipgroupfileset dir="dist" includes="*.jar"/> 
             <manifest>
                 <attribute name="Main-Class" value="${main.class}"/>
             </manifest>
-        </jar> 
+        </jar>
+        <delete file="./dist/CloudflareDynamicDNS.jar"/>
+        <delete dir="./dist/lib"/>
     </target>
 </project>

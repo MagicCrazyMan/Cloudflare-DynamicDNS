@@ -22,7 +22,7 @@ public class ListDNSRecordDetails {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.0.1";
 
     private static final Console CONSOLE = System.console();
 
@@ -36,7 +36,7 @@ public class ListDNSRecordDetails {
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
         String email = CONSOLE.readLine("请输入邮箱:");
-        String password = String.valueOf(CONSOLE.readPassword("请输入密钥(密钥输入过程不可见):"));
+        String password = String.valueOf(CONSOLE.readPassword("请输入Cloudflare Global API Key(密钥输入过程不可见):"));
         String zoneID = CONSOLE.readLine("请输入Zone ID:");
         System.out.println();
 
@@ -98,7 +98,7 @@ public class ListDNSRecordDetails {
         }
     }
 
-    private static void buildMode(CloudflareResponseJson json, String email, String key, String zoneID) {
+    private static void buildMode(CloudflareResponseJson responseJson, String email, String key, String zoneID) {
         ConfigurationJson configJson = new ConfigurationJson();
 
         System.out.println("开始设定全局变量");
@@ -119,8 +119,8 @@ public class ListDNSRecordDetails {
                 exit = true;
             } else {
                 int id = BuildConfigurationJson.readInt(in);
-                if (id < json.result.size()) {
-                    Result result = json.result.get(id);
+                if (id < responseJson.result.size()) {
+                    Result result = responseJson.result.get(id);
                     Domain domain = new Domain();
                     domain.domain = result.name;
                     domain.identifier = result.id;
@@ -150,7 +150,7 @@ public class ListDNSRecordDetails {
         System.out.println("正在当前文件夹生成配置文件...");
         System.out.println();
 
-        BuildConfigurationJson.buildJson(json, name);
+        BuildConfigurationJson.buildJson(configJson, name);
     }
 
     static class CloudflareResponseJson {
