@@ -3,6 +3,8 @@ package club.magiccrazyman.ddns;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -10,6 +12,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -34,6 +38,8 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.xml.XmlConfiguration;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 /**
@@ -172,22 +178,26 @@ public class ConfigurationJson {
     private static void changeLoggerHome(ConfigurationJson config, LoggerContext ctx) {
 
         try {
-            Path source = Paths.get(ctx.getLogger("ddns").getContext().getConfiguration().getConfigurationSource().getURI());
-            Path target = Paths.get(System.getProperty("java.io.tmpdir") + File.separator + "ddnstemp");
-            Files.copy(source, target, StandardCopyOption.COPY_ATTRIBUTES, StandardCopyOption.REPLACE_EXISTING);
+            InputStream is = ConfigurationJson.class.getResourceAsStream("/log4j2.xml");
 
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-            Document doc = docBuilder.parse(target.toFile());
+            Document doc = docBuilder.parse(new InputSource(is));
             doc.getElementsByTagName("property").item(0).setTextContent(config.logFileHome);
-
-            Transformer tr = TransformerFactory.newInstance().newTransformer();
-            tr.transform(new DOMSource(doc), new StreamResult(new FileOutputStream(target.toFile())));
-
-            XmlConfiguration configuration = new XmlConfiguration(ctx, new ConfigurationSource(new FileInputStream(target.toFile())));
-            ctx.setConfiguration(configuration);
             
-            Files.delete(target);
+            for (int i = 0; i < doc.getElementsByTagName("RollingFile").getLength(); i++) {
+                Node node =doc.getElementsByTagName("RollingFile").item(i);
+                node.getAttributes().removeNamedItem("createOnDemand");
+                doc.renameNode(node, null, "RollingRandomAccessFile");
+            }
+
+            StringWriter writer = new StringWriter();
+            Transformer tr = TransformerFactory.newInstance().newTransformer();
+            tr.transform(new DOMSource(doc), new StreamResult(writer));
+            ByteArrayInputStream bais = new ByteArrayInputStream(writer.toString().getBytes());
+
+            XmlConfiguration configuration = new XmlConfiguration(ctx, new ConfigurationSource(bais));
+            ctx.setConfiguration(configuration);
         } catch (IOException | TransformerException | SAXException | ParserConfigurationException ex) {
             java.util.logging.Logger.getLogger(ConfigurationJson.class.getName()).log(Level.SEVERE, null, ex);
         }
