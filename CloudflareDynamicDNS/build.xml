@@ -71,7 +71,7 @@
 
     -->
     <target name="-post-jar"> 
-        <jar destfile="./dist/CloudflareDynamicDNS-2.1.1-Java_1.8.1_191.jar"> 
+        <jar destfile="./dist/CloudflareDynamicDNS-2.2.0-Java_1.8.1_191.jar"> 
             <zipgroupfileset dir="dist/lib" includes="*.jar"/>  
             <zipgroupfileset dir="dist" includes="*.jar"/> 
             <manifest>

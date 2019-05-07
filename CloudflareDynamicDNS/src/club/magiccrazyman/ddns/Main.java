@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2019 Magic Crazy Man
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package club.magiccrazyman.ddns;
 
 import club.magiccrazyman.ddns.tools.BuildConfigurationJson;
@@ -20,8 +36,9 @@ public class Main {
     /**
      * Development version
      */
-    public final static String VERSION = "2.1.1";
+    public final static String VERSION = "2.2.0";
 
+    static String[] inputArgs = null;
     private static String config = "config.json";
     private static boolean isBaidu = false;
     private static boolean start = true;
@@ -31,14 +48,15 @@ public class Main {
      */
     public static void main(String[] args) {
         CLI(args);
-
         if (start == true) {
-            new DDNS(ConfigurationJson.initConfiguration(config, isBaidu)).startDDNS();
+            new DDNS(Configuration.initConfiguration(config, isBaidu)).startDDNS();
         }
     }
 
     private static void CLI(String[] args) {
         try {
+            inputArgs = args;
+
             Options options = new Options();
             options.addOption(Option.builder("h")
                     .hasArg(false)

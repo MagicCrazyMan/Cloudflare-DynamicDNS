@@ -1,8 +1,24 @@
+/*
+ * Copyright (C) 2019 Magic Crazy Man
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package club.magiccrazyman.ddns.tools;
 
-import club.magiccrazyman.ddns.ConfigurationJson;
-import club.magiccrazyman.ddns.ConfigurationJson.Account;
-import club.magiccrazyman.ddns.ConfigurationJson.Account.Domain;
+import club.magiccrazyman.ddns.Configuration;
+import club.magiccrazyman.ddns.Configuration.Account;
+import club.magiccrazyman.ddns.Configuration.Account.Domain;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Console;
@@ -22,7 +38,7 @@ public class BuildConfigurationJson {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.0.1";
 
     private static final Console CONSOLE = System.console();
 
@@ -32,7 +48,7 @@ public class BuildConfigurationJson {
     public static void start() {
         System.out.println(String.format("正在使用配置文件创建工具(版本 %s )", VERSION));
 
-        ConfigurationJson json = new ConfigurationJson();
+        Configuration json = new Configuration();
 
         System.out.println("开始设置全局变量");
         json.whereGetYourIP = CONSOLE.readLine("指定获取本机IP的URL(若无并使用百度作为搜索来源请留空)：");
@@ -58,21 +74,21 @@ public class BuildConfigurationJson {
                 domain.domain = String.valueOf(CONSOLE.readLine("指定域名："));
                 domain.zone = String.valueOf(CONSOLE.readLine("该域名属下的zone："));
                 domain.identifier = String.valueOf(CONSOLE.readLine("该域名的identifier："));
-                for (String type = ""; !ConfigurationJson.VALID_TYPE.contains(type);) {
+                for (String type = ""; !Configuration.VALID_TYPE.contains(type);) {
                     type = CONSOLE.readLine("该域名的类型：");
-                    if (ConfigurationJson.VALID_TYPE.contains(type)) {
+                    if (Configuration.VALID_TYPE.contains(type)) {
                         domain.type = type;
                     } else {
-                        System.out.println("无效的类型，可用的值有" + ConfigurationJson.VALID_TYPE);
+                        System.out.println("无效的类型，可用的值有" + Configuration.VALID_TYPE);
                         type = CONSOLE.readLine("重新输入该域名的类型：");
                     }
                 }
-                for (Integer ttl = 0; !ConfigurationJson.VALID_TTL.contains(ttl);) {
+                for (Integer ttl = 0; !Configuration.VALID_TTL.contains(ttl);) {
                     ttl = readInt(CONSOLE.readLine("该域名的TTL值："));
-                    if (ConfigurationJson.VALID_TTL.contains(ttl)) {
+                    if (Configuration.VALID_TTL.contains(ttl)) {
                         domain.ttl = ttl;
                     } else {
-                        System.out.println("无效的TTL值，可用的值有" + ConfigurationJson.VALID_TTL);
+                        System.out.println("无效的TTL值，可用的值有" + Configuration.VALID_TTL);
                         ttl = Integer.valueOf(CONSOLE.readLine("重新输入该域名的TTL值："));
                     }
                 }
@@ -124,11 +140,11 @@ public class BuildConfigurationJson {
             String os = System.getProperty("os.name").toLowerCase();
             switch (os) {
                 case "linux":
-                    Files.setPosixFilePermissions(file.toPath(), ConfigurationJson.VALID_PERMISSIONS);
+                    Files.setPosixFilePermissions(file.toPath(), Configuration.VALID_PERMISSIONS);
                     break;
             }
             try (FileWriter fw = new FileWriter(file)) {
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().setPrettyPrinting().create();
                 fw.write(gson.toJson(json));
             }
         } catch (IOException ex) {

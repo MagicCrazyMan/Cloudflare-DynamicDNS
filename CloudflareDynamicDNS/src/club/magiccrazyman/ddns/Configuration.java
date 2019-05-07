@@ -1,14 +1,27 @@
+/*
+ * Copyright (C) 2019 Magic Crazy Man
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package club.magiccrazyman.ddns;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,9 +29,6 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,7 +57,7 @@ import org.xml.sax.SAXException;
  *
  * @author Magic Crazy Man
  */
-public class ConfigurationJson {
+public class Configuration {
 
     private final static Logger LOGGER_DDNS = ((LoggerContext) LogManager.getContext()).getLogger("ddns");
     private final static Logger LOGGER_EX = ((LoggerContext) LogManager.getContext()).getLogger("exception");
@@ -125,14 +135,14 @@ public class ConfigurationJson {
     }
 
     /**
-     * inits the configurations and create an ConfigurationJson instance
+     * inits the configurations and create an Configuration instance
      *
      * @param config path of the config file
      * @param isBaidu whether use baidu for getting IP or not
-     * @return if config exists, return an ConfigurationJson instance, otherwise
-     * return null and create a template.json file
+     * @return if config exists, return an Configuration instance, otherwise
+     * return null and create a template.json file at current folder
      */
-    public static ConfigurationJson initConfiguration(String config, boolean isBaidu) {
+    public static Configuration initConfiguration(String config, boolean isBaidu) {
         File configFile = new File(config);
 
         if (configFile.exists()) {
@@ -143,9 +153,9 @@ public class ConfigurationJson {
         }
     }
 
-    private static ConfigurationJson readConfiguraation(File configFile, boolean isBaidu) {
-        Gson gson = new GsonBuilder().create();
-        ConfigurationJson configJson = null;
+    private static Configuration readConfiguraation(File configFile, boolean isBaidu) {
+        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        Configuration configJson = null;
 
         FileReader fr;
         try {
@@ -154,7 +164,7 @@ public class ConfigurationJson {
                 case "linux":
                     Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(configFile.toPath(), LinkOption.NOFOLLOW_LINKS);
                     for (PosixFilePermission s : permissions) {
-                        if (ConfigurationJson.INVALID_PERMISSIONS.contains(s)) {
+                        if (Configuration.INVALID_PERMISSIONS.contains(s)) {
                             LOGGER_EX.error("配置文件权限不正确！请确认配置文件权限为600");
                             System.exit(0);
                         }
@@ -162,7 +172,7 @@ public class ConfigurationJson {
                     break;
             }
             fr = new FileReader(configFile);
-            configJson = gson.fromJson(fr, ConfigurationJson.class);
+            configJson = gson.fromJson(fr, Configuration.class);
             configJson.isBaidu = isBaidu;
 
             changeLoggerHome(configJson, (LoggerContext) LogManager.getContext());
@@ -175,18 +185,18 @@ public class ConfigurationJson {
         return configJson;
     }
 
-    private static void changeLoggerHome(ConfigurationJson config, LoggerContext ctx) {
+    private static void changeLoggerHome(Configuration config, LoggerContext ctx) {
 
         try {
-            InputStream is = ConfigurationJson.class.getResourceAsStream("/log4j2.xml");
+            InputStream is = Configuration.class.getResourceAsStream("/log4j2.xml");
 
             DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
             Document doc = docBuilder.parse(new InputSource(is));
             doc.getElementsByTagName("property").item(0).setTextContent(config.logFileHome);
-            
+
             for (int i = 0; i < doc.getElementsByTagName("RollingFile").getLength(); i++) {
-                Node node =doc.getElementsByTagName("RollingFile").item(i);
+                Node node = doc.getElementsByTagName("RollingFile").item(i);
                 node.getAttributes().removeNamedItem("createOnDemand");
                 doc.renameNode(node, null, "RollingRandomAccessFile");
             }
@@ -199,13 +209,13 @@ public class ConfigurationJson {
             XmlConfiguration configuration = new XmlConfiguration(ctx, new ConfigurationSource(bais));
             ctx.setConfiguration(configuration);
         } catch (IOException | TransformerException | SAXException | ParserConfigurationException ex) {
-            java.util.logging.Logger.getLogger(ConfigurationJson.class.getName()).log(Level.SEVERE, null, ex);
+            java.util.logging.Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
     private static void createTemplate() {
-        Gson gson = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
-        ConfigurationJson templateJson = new ConfigurationJson();
+        Gson gson = new GsonBuilder().serializeNulls().excludeFieldsWithoutExposeAnnotation().setPrettyPrinting().create();
+        Configuration templateJson = new Configuration();
         templateJson.whereGetYourIP = "url";
         templateJson.logFileHome = ".";
         templateJson.defaultSleepSconds = 900;
@@ -250,7 +260,7 @@ public class ConfigurationJson {
                 String os = System.getProperty("os.name").toLowerCase();
                 switch (os) {
                     case "linux":
-                        Files.setPosixFilePermissions(f.toPath(), ConfigurationJson.VALID_PERMISSIONS);
+                        Files.setPosixFilePermissions(f.toPath(), Configuration.VALID_PERMISSIONS);
                         break;
                 }
                 fw.write(json);
@@ -262,7 +272,6 @@ public class ConfigurationJson {
         LOGGER_EX.error("可以使用自带的工具创建配置文件");
     }
 
-    @Expose
     boolean isBaidu;
     /**
      * An URL where can get your Intenet IP Address
@@ -270,6 +279,7 @@ public class ConfigurationJson {
      * This URL should return a json string like: {"ip":"0.0.0.0"}
      *
      */
+    @Expose
     public String whereGetYourIP;
 
     /**
@@ -277,6 +287,7 @@ public class ConfigurationJson {
      * <p>
      * log files saves in current folder in default
      */
+    @Expose
     public String logFileHome;
 
     /**
@@ -284,12 +295,14 @@ public class ConfigurationJson {
      * <p>
      * When a DNS record's TTl value is 1, this may work as sleep time
      */
+    @Expose
     public int defaultSleepSconds;
 
     /**
      * Sleep time in seconds when failed to check a DNS record or connect to
      * remote server
      */
+    @Expose
     public int failedSleepSeconds;
 
     /**
@@ -297,6 +310,7 @@ public class ConfigurationJson {
      * <p>
      * Each account has different Email and Global API Key
      */
+    @Expose
     public ArrayList<Account> accounts = new ArrayList<>();
 
     /**
@@ -307,11 +321,13 @@ public class ConfigurationJson {
         /**
          * Cloudflare account's email
          */
+        @Expose
         public String email;
 
         /**
          * Account's Global API Key
          */
+        @Expose
         public String key;
 
         /**
@@ -319,6 +335,7 @@ public class ConfigurationJson {
          * <p>
          * Each domain will be kept checking in ONE thread
          */
+        @Expose
         public ArrayList<Domain> domains = new ArrayList<>();
 
         /**
@@ -329,36 +346,43 @@ public class ConfigurationJson {
             /**
              * Defines thread name
              */
+            @Expose
             public String nickname;
 
             /**
              * Full domain
              */
+            @Expose
             public String domain;
 
             /**
              * Zone ID of root domain
              */
+            @Expose
             public String zone;
 
             /**
              * Identifier of this domain
              */
+            @Expose
             public String identifier;
 
             /**
              * Record type of this domain
              */
+            @Expose
             public String type;
 
             /**
              * Record TTL of this domain
              */
+            @Expose
             public int ttl;
 
             /**
              * whether or not enable the Cloudflare CDN proxy
              */
+            @Expose
             public boolean proixed;
         }
     }

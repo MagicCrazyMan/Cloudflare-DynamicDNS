@@ -1,8 +1,24 @@
+/*
+ * Copyright (C) 2019 Magic Crazy Man
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package club.magiccrazyman.ddns.tools;
 
-import club.magiccrazyman.ddns.ConfigurationJson;
-import club.magiccrazyman.ddns.ConfigurationJson.Account;
-import club.magiccrazyman.ddns.ConfigurationJson.Account.Domain;
+import club.magiccrazyman.ddns.Configuration;
+import club.magiccrazyman.ddns.Configuration.Account;
+import club.magiccrazyman.ddns.Configuration.Account.Domain;
 import club.magiccrazyman.ddns.tools.ListDNSRecordDetails.CloudflareResponseJson.Result;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -22,7 +38,7 @@ public class ListDNSRecordDetails {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.1";
+    public static final String VERSION = "1.0.2";
 
     private static final Console CONSOLE = System.console();
 
@@ -67,6 +83,8 @@ public class ListDNSRecordDetails {
 
                 String in = CONSOLE.readLine("请输入一个命令或序号:");
                 switch (in) {
+                    case "":
+                        break;
                     case "exit":
                         exit = true;
                         break;
@@ -99,10 +117,11 @@ public class ListDNSRecordDetails {
     }
 
     private static void buildMode(CloudflareResponseJson responseJson, String email, String key, String zoneID) {
-        ConfigurationJson configJson = new ConfigurationJson();
+        Configuration configJson = new Configuration();
 
         System.out.println("开始设定全局变量");
         configJson.whereGetYourIP = CONSOLE.readLine("指定获取本机IP的URL(若无并使用百度作为搜索来源请留空)：");
+        configJson.logFileHome = CONSOLE.readLine("指定日志文件储存位置：");
         configJson.defaultSleepSconds = Integer.parseInt(CONSOLE.readLine("指定成功更新后等待的时间(秒)："));
         configJson.failedSleepSeconds = Integer.parseInt(CONSOLE.readLine("指定任意失败后等待重试的时间(秒)："));
         System.out.println("全局变量设定完毕");

@@ -49,7 +49,6 @@
         </Logger>
         <Logger name="exception" level="trace" additivity="false">
             <AppenderRef ref="exception" />
-            <AppenderRef ref="Console" />
         </Logger>
         <Root level="error">
             <AppenderRef ref="Console" />
