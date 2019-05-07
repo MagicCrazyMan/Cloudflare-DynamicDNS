@@ -1,5 +1,5 @@
 # Cloudflare-DynamicDNS
-<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.1.1</strong></p>
+<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.2.0</strong></p>
 <p><i>
   该应用暂时只有<strong>中文</strong>版本！
   </br>
@@ -38,6 +38,15 @@
   <li>-l,--list</br>运行DNS查询工具并进行配置文件创建</li>
   <li>-h,--help</br>显示所有可用参数</br>
   <li>-v,--version</br>查看当前版本</li>
+</ul>
+
+<h3>程序内控制台命令</h3>
+<ul>
+  <li>help</br>查看所有命令</li>
+  <li>list</br>查询所有正在运行的域名更新线程</li>
+  <li>reload</br>重新读取配置文件并重启</li>
+  <li>update</br><线程名称> 强制更新域名，该强制更新会新建一个线程进行更新，不会影响原运行的线程</li>
+  <li>stop</br>强制关闭程序</br>
 </ul>
 
 <h3>JSON配置文件格式</h3>
