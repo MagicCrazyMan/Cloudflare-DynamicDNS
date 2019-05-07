@@ -91,7 +91,7 @@ public class DDNS {
             commands.put("help", "查看所有命令");
             commands.put("list", "查询所有正在运行的域名更新线程");
             commands.put("reload", "重新读取配置文件并重启");
-            commands.put("update", "<域名昵称> 强制更新域名");
+            commands.put("update", "<线程名称> 强制更新域名");
             commands.put("stop", "强制关闭程序");
         }
 
