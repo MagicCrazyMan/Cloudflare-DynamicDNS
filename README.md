@@ -1,5 +1,5 @@
 # Cloudflare-DynamicDNS
-<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.2.0</strong></p>
+<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.2.1</strong></p>
 <p><i>
   该应用暂时只有<strong>中文</strong>版本！
   </br>
@@ -9,6 +9,15 @@
 <h3>介绍</h3>
 <p>本应用主要为拥有动态公网IP的家庭宽带用户提供解决方案</br><i><strong>一次操作，一劳永逸</strong></i></p>
 
+<h3>特性</h3>
+<ol>
+  <li>使用 Cloudflare Web API，理论上支持所有由 Cloudflare Web API 提供的功能</li>
+  <li>基于Java的跨平台特性,一次配置即可跨平台使用。<strong>需注意关于文件配置可能需要进行一定的修改</strong></li>
+  <li>支持 <code><strong>Http/Https</strong></code>, <code><strong>JavaScript</strong></code> 进行IP地址获取。同时提供了从百度搜索获取IP的全能获取方式，但它不安全</li>
+  <li>基本的程序内控制台命令功能</li>
+  <li>理论上支持IPv4及IPv6，但还没进行过测试</li>
+</ol>
+
 <h3>使用前须知</h3>
 <ol>
   <li>应用基于 Cloudflare DNS Web API 开发，现阶段<strong>仅可用于</strong> Cloudflare DNS 服务</li>
@@ -16,6 +25,8 @@
   <li>应用为<strong>命令行</strong>应用，暂无GUI界面</li>
   <li>应用<strong>必须</strong>部署于需要动态更新IP的网络内的一台设备</li>
   <li>应用使用<strong>JSON</strong>作为配置文件，使用前最好有基本的JSON知识</li>
+  <li>Windows下配置文件时需要注意<strong>文件夹分隔符</strong> <code>\</code> 应该写为 <code>\\</code></li>
+  <li>使用本地脚本获取IP需要注意脚本本身的安全性，程序本身<strong>不提供任何检测恶意脚本功能</strong>，请只使用来源可信任的脚本</li>
   <li>应用<strong>不提供</strong>对配置文件的任何加密功能，配置文件均为<strong>明文</strong>记录，用户<strong>必须</strong>自行保证配置文件的安全</li>
   <li>Cloudflare Global API Key 一旦泄露，请<strong>立即</strong>前往 Cloudflare 官网重置 Global API Key</li>
 </ol>
@@ -60,22 +71,19 @@
 |-(int) defaultSleepSconds  //全局变量，默认线程休眠的时间，如ip未变更以及ttl为1(Automatic)是
 |-(int) failedSleepSeconds  //全局变量，发生错误后线程休眠的时间，如连接网络失败
 |-(ArrayList<Acccount>) accounts  //含有所有 Cloudflare Account 的 ArrayList
-  |-(String) email  //Cloudflare Account 对应的 Email
-  |-(String) key  //Cloudflare Account 对应的 Global API Key
-  |-(ArrayList<Domain>) Domains   //包含所有该 Cloudflare Account 下需要动态更新的域名的 ArrayList
-    |-(String) nickname   //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
-    |-(String) domain   //域名的完整名称
-    |-(String) zone   //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
-    |-(String) identifier   //该域名的 identifier ID
-    |-(String) type   //该域名的类型
-    |-(int) ttl   //该域名的TTL值
-    |-(boolean) proixed   //是否使用 Cloudflare CDN代理</pre></code>  
+    |-(String) email  //Cloudflare Account 对应的 Email
+    |-(String) key  //Cloudflare Account 对应的 Global API Key
+    |-(ArrayList<Domain>) Domains   //包含所有该 Cloudflare Account 下需要动态更新的域名的 ArrayList
+      |-(String) nickname   //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
+      |-(String) domain   //域名的完整名称
+      |-(String) zone   //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
+      |-(String) identifier   //该域名的 identifier ID
+      |-(String) type   //该域名的类型
+      |-(int) ttl   //该域名的TTL值
+      |-(boolean) proixed   //是否使用 Cloudflare CDN代理</pre></code>  
 <ul>注意：
   <li>一个配置文件可以含有多个 Cloudflare Account，每一个账户有一个对应的 Email 和 Global API Key</li>
   <li>一个 Cloudflare Account 可以含有多个 Domain，每一个 Domain 都有自己对应的信息</li>
-  <li>
-  whereGetYourIP 的URL应该以JSON的方式返回ip信息，并且格式要求为 <code>{"ip":"0.0.0.0"}</code>
-  </li>
 </ul>
 
 <h3>一些自带的小工具</h3>
@@ -110,6 +118,24 @@
   </ol>
 </li>
 </ol>
+
+<h3>获取IP</h3>
+<ol>
+  <li>
+    <h4>Http/Https 获取IP</h4>
+    <p>只要以JSON的方式返回ip信息即可，并且格式要求为 <code>{"ip":"0.0.0.0"}</code></p>
+  </li>
+  
+  <li>
+    <h4>JavaScript 脚本获取IP</h4>
+    <p>脚本要求很简单，只要含有以下的函数即可
+    </br><code>function getIP(){
+    	  return "your.ip.as.string";
+    }</code>
+    </p>
+  </li>
+</ol>
+
 
 <h3>开发依赖</h3>
 <ol>
