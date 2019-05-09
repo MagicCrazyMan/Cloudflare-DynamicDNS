@@ -2,6 +2,7 @@
 <ul>
     <li>修改 域名配置不再需要域名名称，名称将会在启动时从cloudflare处获取</li>
     <li>修改 不再使用操作系统ping指令更新域名ip。启动时从cloudflare处获取域名ip，之后一旦更新成功，域名ip将自动变为本地ip</li>
+    <li>增加 支持JavaScript脚本获取IP地址</li>
 </ul>
 
 <h3><i>Version 2.2.0</i></h3>
