@@ -226,7 +226,6 @@ public class Configuration {
         A1.key = "Cloudflare SecretKey";
         Account.Domain domain1 = new Account.Domain();
         domain1.nickname = "nickname 1";
-        domain1.domain = "example1.example1.example1";
         domain1.zone = "Cloudflare DNS Zone";
         domain1.identifier = "Cloudflare DNS domain identifier";
         domain1.proixed = false;
@@ -239,7 +238,6 @@ public class Configuration {
         A2.key = "Cloudflare SecretKey";
         Account.Domain domain2 = new Account.Domain();
         domain2.nickname = "nickname 2";
-        domain2.domain = "example2.example2.example2";
         domain2.zone = "Cloudflare DNS Zone";
         domain2.identifier = "Cloudflare DNS domain identifier";
         domain2.proixed = false;
@@ -348,12 +346,6 @@ public class Configuration {
              */
             @Expose
             public String nickname;
-
-            /**
-             * Full domain
-             */
-            @Expose
-            public String domain;
 
             /**
              * Zone ID of root domain

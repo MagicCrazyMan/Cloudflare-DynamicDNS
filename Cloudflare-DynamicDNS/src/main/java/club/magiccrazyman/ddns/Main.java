@@ -36,7 +36,7 @@ public class Main {
     /**
      * Development version
      */
-    public final static String VERSION = "2.2.0";
+    public final static String VERSION = "2.2.1";
 
     static String[] inputArgs = null;
     private static String config = "config.json";

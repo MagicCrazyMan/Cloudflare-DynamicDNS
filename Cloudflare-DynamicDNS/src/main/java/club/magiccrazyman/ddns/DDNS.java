@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.logging.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -195,6 +196,7 @@ public class DDNS {
     class UpdateRunnable implements Runnable {
 
         private final Domain DOMAIN;
+        private final String DOMAIN_NAME;
         private final HashMap<String, String> HEADERS = new HashMap<>();
 
         public UpdateRunnable(String email, String key, Domain domain) {
@@ -203,11 +205,26 @@ public class DDNS {
             this.HEADERS.put("X-Auth-Email", email);
             this.HEADERS.put("X-Auth-Key", key);
             this.HEADERS.put("Content-Type", "application/json");
+
+            Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+            HttpConnection conn = (HttpConnection) Jsoup.connect(String.format("https://api.cloudflare.com/client/v4/zones/%s/dns_records/%s", DOMAIN.zone, DOMAIN.identifier));
+            conn.headers(HEADERS);
+            conn.ignoreContentType(true);
+            conn.method(Connection.Method.GET);
+
+            CloudflareResponseJson json = null;
+            try {
+                json = gson.fromJson(conn.execute().body(), CloudflareResponseJson.class);
+            } catch (IOException ex) {
+                LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
+                LOGGER_EX.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
+            }
+            DOMAIN_NAME = json.result.name;
         }
 
         @Override
         public void run() {
-            LOGGER_DDNS.info(String.format("域名 %s 的DDNS服务已启动", DOMAIN.domain));
+            LOGGER_DDNS.info(String.format("域名 %s 的DDNS服务已启动", DOMAIN_NAME));
 
             while (!Thread.currentThread().isInterrupted()) {
                 updateDNS();
@@ -224,7 +241,7 @@ public class DDNS {
                         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
                         UpdateJson updateJson = new UpdateJson();
                         updateJson.type = DOMAIN.type;
-                        updateJson.name = DOMAIN.domain;
+                        updateJson.name = DOMAIN_NAME;
                         updateJson.content = newIP;
                         updateJson.ttl = DOMAIN.ttl;
                         updateJson.proxied = DOMAIN.proixed;
@@ -238,17 +255,17 @@ public class DDNS {
                         CloudflareResponseJson responseJson = gson.fromJson(conn2.execute().body(), CloudflareResponseJson.class);
 
                         if (responseJson.success) {
-                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN.domain, newIP, DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds : DOMAIN.ttl * 4));
+                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, newIP, DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds : DOMAIN.ttl * 4));
                             sleep(DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds * 1000 : DOMAIN.ttl * 4 * 1000);
                         } else {
                             LOGGER_DDNS.error(String.format("域名 %s 更新失败,将睡眠 %s 秒后重试" + System.lineSeparator()
                                     + "失败原因：" + System.lineSeparator()
                                     + formatErrorMessages(responseJson.errors),
-                                    DOMAIN.domain, CONFIG.failedSleepSeconds));
+                                    DOMAIN_NAME, CONFIG.failedSleepSeconds));
                             sleep(CONFIG.failedSleepSeconds);
                         }
                     } else {
-                        LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN.domain, CONFIG.defaultSleepSconds));
+                        LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN_NAME, CONFIG.defaultSleepSconds));
                         sleep(CONFIG.defaultSleepSconds * 1000);
                     }
                 }
@@ -260,44 +277,79 @@ public class DDNS {
         }
 
         private String getLocalIP() {
-            if (CONFIG.isBaidu) {
-                try {
-                    HttpConnection conn = (HttpConnection) Jsoup.connect("https://www.baidu.com/s?wd=ip");
-                    Document doc = conn.execute().parse();
-                    String ip = doc.getElementById("1").attr("fk");
-                    return ip;
-                } catch (NullPointerException | IOException ex) {
-                    LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
-                    LOGGER_EX.error(ex);
-                    sleep(CONFIG.failedSleepSeconds * 1000);
-                }
-            } else {
-                try {
-                    HttpConnection conn = (HttpConnection) Jsoup.connect(CONFIG.whereGetYourIP);
-                    conn.ignoreContentType(true);
-                    Gson gson = new GsonBuilder()
-                            .disableHtmlEscaping()
-                            .setPrettyPrinting()
-                            .create();
-                    LocalAddrJson addr = gson.fromJson(conn.execute().body(), LocalAddrJson.class);
-                    return addr.ip;
-                } catch (IOException ex) {
-                    LOGGER_DDNS.error(String.format("远程服务器故障，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
-                    LOGGER_EX.error(ex);
-                    sleep(CONFIG.failedSleepSeconds * 1000);
-                } catch (IllegalArgumentException ex) {
-                    LOGGER_DDNS.fatal("请确定输入的URL正确，进程已中止");
-                    LOGGER_EX.fatal(ex);
+
+            String type = sourceType();
+            switch (type) {
+                case "baidu":
+                    return getIPviaBaidu();
+                case "url":
+                    return getIPviaURL();
+                case "js":
+                    return getIPviaJS();
+                default:
+                    LOGGER_DDNS.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
+                    LOGGER_EX.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
                     System.exit(1);
-                }
+                    return null;
+            }
+        }
+
+        private String getIPviaBaidu() {
+            try {
+                HttpConnection conn = (HttpConnection) Jsoup.connect("https://www.baidu.com/s?wd=ip");
+                Document doc = conn.execute().parse();
+                String ip = doc.getElementById("1").attr("fk");
+                return ip;
+            } catch (NullPointerException | IOException ex) {
+                LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
+                LOGGER_EX.error(ex);
+                sleep(CONFIG.failedSleepSeconds * 1000);
             }
             return null;
+        }
+
+        private String getIPviaURL() {
+            try {
+                HttpConnection conn = (HttpConnection) Jsoup.connect(CONFIG.whereGetYourIP);
+                conn.ignoreContentType(true);
+                Gson gson = new GsonBuilder()
+                        .disableHtmlEscaping()
+                        .setPrettyPrinting()
+                        .create();
+                LocalAddrJson addr = gson.fromJson(conn.execute().body(), LocalAddrJson.class);
+                return addr.ip;
+            } catch (IOException ex) {
+                LOGGER_DDNS.error(String.format("远程服务器故障，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
+                LOGGER_EX.error(ex);
+                sleep(CONFIG.failedSleepSeconds * 1000);
+            } catch (IllegalArgumentException ex) {
+                LOGGER_DDNS.fatal("请确定输入的URL正确，进程已中止");
+                LOGGER_EX.fatal(ex);
+                System.exit(1);
+            }
+            return null;
+        }
+
+        private String getIPviaJS() {
+            return null;
+        }
+
+        private String sourceType() {
+            if (CONFIG.isBaidu) {
+                return "baidu";
+            } else if (CONFIG.whereGetYourIP.startsWith("http://") || CONFIG.whereGetYourIP.startsWith("https://")) {
+                return "url";
+            } else if (CONFIG.whereGetYourIP.endsWith(".js")) {
+                return "js";
+            } else {
+                return "unknown";
+            }
         }
 
         //ping the ip address of this domain
         private String getDomainIP() {
             try {
-                String command = String.format("ping %s -c 1", DOMAIN.domain);
+                String command = String.format("ping %s -c 1", DOMAIN_NAME);
                 Process process = Runtime.getRuntime().exec(command);
                 BufferedReader bis = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 String str = bis.readLine().split(" ")[2];

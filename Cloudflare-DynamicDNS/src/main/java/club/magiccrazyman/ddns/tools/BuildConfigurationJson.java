@@ -38,7 +38,7 @@ public class BuildConfigurationJson {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.1";
+    public static final String VERSION = "1.0.2";
 
     private static final Console CONSOLE = System.console();
 
@@ -71,9 +71,8 @@ public class BuildConfigurationJson {
                 System.out.println("开始设置域名信息");
 
                 Domain domain = new Domain();
-                domain.domain = String.valueOf(CONSOLE.readLine("指定域名："));
-                domain.zone = String.valueOf(CONSOLE.readLine("该域名属下的zone："));
-                domain.identifier = String.valueOf(CONSOLE.readLine("该域名的identifier："));
+                domain.zone = String.valueOf(CONSOLE.readLine("目标域名属下的zone："));
+                domain.identifier = String.valueOf(CONSOLE.readLine("目标域名的identifier："));
                 for (String type = ""; !Configuration.VALID_TYPE.contains(type);) {
                     type = CONSOLE.readLine("该域名的类型：");
                     if (Configuration.VALID_TYPE.contains(type)) {

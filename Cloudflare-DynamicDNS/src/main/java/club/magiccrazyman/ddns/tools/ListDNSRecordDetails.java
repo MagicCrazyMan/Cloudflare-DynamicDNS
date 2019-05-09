@@ -38,7 +38,7 @@ public class ListDNSRecordDetails {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.2";
+    public static final String VERSION = "1.0.3";
 
     private static final Console CONSOLE = System.console();
 
@@ -141,7 +141,6 @@ public class ListDNSRecordDetails {
                 if (id < responseJson.result.size()) {
                     Result result = responseJson.result.get(id);
                     Domain domain = new Domain();
-                    domain.domain = result.name;
                     domain.identifier = result.id;
                     domain.type = result.type;
                     domain.zone = zoneID;
