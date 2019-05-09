@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
-import java.util.logging.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -199,6 +198,9 @@ public class DDNS {
         private final String DOMAIN_NAME;
         private final HashMap<String, String> HEADERS = new HashMap<>();
 
+        private String domainIP = null;
+        private String localIP = null;
+
         public UpdateRunnable(String email, String key, Domain domain) {
             this.DOMAIN = domain;
 
@@ -220,6 +222,7 @@ public class DDNS {
                 LOGGER_EX.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
             }
             DOMAIN_NAME = json.result.name;
+            domainIP = json.result.content;
         }
 
         @Override
@@ -233,16 +236,15 @@ public class DDNS {
 
         private void updateDNS() {
             try {
-                String newIP = getLocalIP();
-                String oldIP = getDomainIP();
+                getLocalIP();
 
-                if (newIP != null && oldIP != null) {
-                    if (!newIP.equals(oldIP)) {
+                if (localIP != null && domainIP != null) {
+                    if (!localIP.equals(domainIP)) {
                         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
                         UpdateJson updateJson = new UpdateJson();
                         updateJson.type = DOMAIN.type;
                         updateJson.name = DOMAIN_NAME;
-                        updateJson.content = newIP;
+                        updateJson.content = localIP;
                         updateJson.ttl = DOMAIN.ttl;
                         updateJson.proxied = DOMAIN.proixed;
 
@@ -255,7 +257,8 @@ public class DDNS {
                         CloudflareResponseJson responseJson = gson.fromJson(conn2.execute().body(), CloudflareResponseJson.class);
 
                         if (responseJson.success) {
-                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, newIP, DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds : DOMAIN.ttl * 4));
+                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, localIP, DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds : DOMAIN.ttl * 4));
+                            domainIP = localIP;
                             sleep(DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds * 1000 : DOMAIN.ttl * 4 * 1000);
                         } else {
                             LOGGER_DDNS.error(String.format("域名 %s 更新失败,将睡眠 %s 秒后重试" + System.lineSeparator()
@@ -276,21 +279,24 @@ public class DDNS {
             }
         }
 
-        private String getLocalIP() {
+        private void getLocalIP() {
 
             String type = sourceType();
             switch (type) {
                 case "baidu":
-                    return getIPviaBaidu();
+                    localIP = getIPviaBaidu();
+                    break;
                 case "url":
-                    return getIPviaURL();
+                    localIP = getIPviaURL();
+                    break;
                 case "js":
-                    return getIPviaJS();
+                    localIP = getIPviaJS();
+                    break;
                 default:
                     LOGGER_DDNS.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
                     LOGGER_EX.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
                     System.exit(1);
-                    return null;
+                    localIP = null;
             }
         }
 
@@ -316,7 +322,7 @@ public class DDNS {
                         .disableHtmlEscaping()
                         .setPrettyPrinting()
                         .create();
-                LocalAddrJson addr = gson.fromJson(conn.execute().body(), LocalAddrJson.class);
+                LocalIPJson addr = gson.fromJson(conn.execute().body(), LocalIPJson.class);
                 return addr.ip;
             } catch (IOException ex) {
                 LOGGER_DDNS.error(String.format("远程服务器故障，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
@@ -344,23 +350,6 @@ public class DDNS {
             } else {
                 return "unknown";
             }
-        }
-
-        //ping the ip address of this domain
-        private String getDomainIP() {
-            try {
-                String command = String.format("ping %s -c 1", DOMAIN_NAME);
-                Process process = Runtime.getRuntime().exec(command);
-                BufferedReader bis = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                String str = bis.readLine().split(" ")[2];
-                String ip = str.substring(1, str.length() - 1);
-                return ip;
-            } catch (IOException ex) {
-                LOGGER_DDNS.error(String.format("获取原有IP失败，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
-                LOGGER_EX.error(ex);
-                sleep(CONFIG.failedSleepSeconds * 1000);
-            }
-            return null;
         }
 
         private void sleep(long time) {
@@ -423,7 +412,7 @@ public class DDNS {
             }
         }
 
-        class LocalAddrJson {
+        class LocalIPJson {
 
             String ip;
         }
