@@ -20,12 +20,19 @@ import club.magiccrazyman.ddns.Configuration.Account.Domain;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.logging.Level;
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -200,6 +207,7 @@ public class DDNS {
 
         private String domainIP = null;
         private String localIP = null;
+        private String sourceType = null;
 
         public UpdateRunnable(String email, String key, Domain domain) {
             this.DOMAIN = domain;
@@ -223,6 +231,8 @@ public class DDNS {
             }
             DOMAIN_NAME = json.result.name;
             domainIP = json.result.content;
+
+            getSourceType();
         }
 
         @Override
@@ -281,40 +291,49 @@ public class DDNS {
 
         private void getLocalIP() {
 
-            String type = sourceType();
-            switch (type) {
+            switch (sourceType) {
                 case "baidu":
-                    localIP = getIPviaBaidu();
+                    getIPviaBaidu();
                     break;
-                case "url":
-                    localIP = getIPviaURL();
+                case "http":
+                    getIPviaHtttp();
                     break;
                 case "js":
-                    localIP = getIPviaJS();
+                    getIPviaJS();
                     break;
                 default:
                     LOGGER_DDNS.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
                     LOGGER_EX.error(String.format("未知IP来源 %s", CONFIG.whereGetYourIP));
                     System.exit(1);
-                    localIP = null;
             }
         }
 
-        private String getIPviaBaidu() {
+        private void getSourceType() {
+            if (CONFIG.isBaidu) {
+                sourceType = "baidu";
+            } else if (CONFIG.whereGetYourIP.startsWith("http://") || CONFIG.whereGetYourIP.startsWith("https://")) {
+                sourceType = "http";
+            } else if (CONFIG.whereGetYourIP.endsWith(".js")) {
+                sourceType = "js";
+            } else {
+                sourceType = "unknown";
+            }
+        }
+
+        private void getIPviaBaidu() {
             try {
                 HttpConnection conn = (HttpConnection) Jsoup.connect("https://www.baidu.com/s?wd=ip");
                 Document doc = conn.execute().parse();
-                String ip = doc.getElementById("1").attr("fk");
-                return ip;
+                localIP = doc.getElementById("1").attr("fk");
             } catch (NullPointerException | IOException ex) {
                 LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
                 LOGGER_EX.error(ex);
+                localIP = null;
                 sleep(CONFIG.failedSleepSeconds * 1000);
             }
-            return null;
         }
 
-        private String getIPviaURL() {
+        private void getIPviaHtttp() {
             try {
                 HttpConnection conn = (HttpConnection) Jsoup.connect(CONFIG.whereGetYourIP);
                 conn.ignoreContentType(true);
@@ -323,32 +342,31 @@ public class DDNS {
                         .setPrettyPrinting()
                         .create();
                 LocalIPJson addr = gson.fromJson(conn.execute().body(), LocalIPJson.class);
-                return addr.ip;
+                localIP = addr.ip;
             } catch (IOException ex) {
-                LOGGER_DDNS.error(String.format("远程服务器故障，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
+                LOGGER_DDNS.error(String.format("服务器 %s 故障，将在 %s 秒后重试", CONFIG.whereGetYourIP, CONFIG.failedSleepSeconds));
                 LOGGER_EX.error(ex);
+                localIP = null;
                 sleep(CONFIG.failedSleepSeconds * 1000);
             } catch (IllegalArgumentException ex) {
-                LOGGER_DDNS.fatal("请确定输入的URL正确，进程已中止");
+                LOGGER_DDNS.fatal(String.format("无效HTTP地址 %s", CONFIG.whereGetYourIP));
                 LOGGER_EX.fatal(ex);
                 System.exit(1);
             }
-            return null;
         }
 
-        private String getIPviaJS() {
-            return null;
-        }
-
-        private String sourceType() {
-            if (CONFIG.isBaidu) {
-                return "baidu";
-            } else if (CONFIG.whereGetYourIP.startsWith("http://") || CONFIG.whereGetYourIP.startsWith("https://")) {
-                return "url";
-            } else if (CONFIG.whereGetYourIP.endsWith(".js")) {
-                return "js";
-            } else {
-                return "unknown";
+        private void getIPviaJS() {
+            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngine engine = manager.getEngineByName("nashorn");
+            try {
+                engine.eval(new FileReader(CONFIG.whereGetYourIP));
+                Invocable invo = (Invocable) engine;
+                localIP = (String) invo.invokeFunction("getIP", "");
+            } catch (FileNotFoundException | NoSuchMethodException | ScriptException ex) {
+                LOGGER_DDNS.error(String.format("无效JavaScript文件 %s", CONFIG.whereGetYourIP));
+                LOGGER_EX.error(ex);
+                localIP = null;
+                System.exit(1);
             }
         }
 
