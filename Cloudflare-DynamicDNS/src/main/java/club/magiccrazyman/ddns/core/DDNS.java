@@ -14,20 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package club.magiccrazyman.ddns;
+package club.magiccrazyman.ddns.core;
 
-import club.magiccrazyman.ddns.Configuration.Account.Domain;
+import club.magiccrazyman.ddns.components.ComponentInterface;
+import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
+import club.magiccrazyman.ddns.components.command.Command;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Scanner;
+import java.util.Set;
 import java.util.logging.Level;
 import javax.script.Invocable;
 import javax.script.ScriptEngine;
@@ -40,6 +39,7 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.helper.HttpConnection;
 import org.jsoup.nodes.Document;
+import org.reflections.Reflections;
 
 /**
  *
@@ -52,7 +52,9 @@ public class DDNS {
 
     private final Configuration CONFIG;
     private final HashMap<String, Thread> UPDATE_THREADS = new HashMap<>();
-    private final HashMap<String, Runnable> UPDATE_RUNNABLE = new HashMap<>();
+    private final HashMap<String, ComponentInterface> COMPONENTS = new HashMap<>();
+
+    private boolean isInit = false;
 
     /**
      * Create a new <code>DDNS</code> instance by given parameters
@@ -61,13 +63,16 @@ public class DDNS {
      */
     public DDNS(Configuration config) {
         CONFIG = config;
+
+        initInternalComponents();
+        initExternalComponents();
     }
 
     /**
      * Start service
      */
     public void startDDNS() {
-        if (CONFIG != null) {
+        if (CONFIG != null && isInit) {
             LOGGER_DDNS.info("DDNS 正在初始化...");
             if (CONFIG.isBaidu) {
                 LOGGER_DDNS.info("检测到你正在使用百度获取网络IP地址，建议使用可信任的主机自行搭建IP查询网页");
@@ -78,124 +83,47 @@ public class DDNS {
                     Runnable r = new UpdateRunnable(a.email, a.key, d);
                     Thread t = new Thread(r);
                     UPDATE_THREADS.put(d.nickname, t);
-                    UPDATE_RUNNABLE.put(d.nickname, r);
                     t.setName(d.nickname);
                     t.start();
                 });
             });
-            //启动控制台命令线程
-            Thread t = new Thread(new CommandRunnable());
-            t.setName("Command");
-            t.start();
+            //启动组件
+            startComponents();
         }
     }
 
-    class CommandRunnable implements Runnable {
-
-        private final HashMap<String, String> commands = new HashMap<>();
-
-        public CommandRunnable() {
-            commands.put("help", "查看所有命令");
-            commands.put("list", "查询所有正在运行的域名更新线程");
-            commands.put("reload", "重新读取配置文件并重启");
-            commands.put("update", "<线程名称> 强制更新域名");
-            commands.put("stop", "强制关闭程序");
-        }
-
-        @Override
-        public void run() {
-            while (!Thread.currentThread().isInterrupted()) {
-                listen();
+    //初始化内置组件
+    private void initInternalComponents() {
+        Reflections reflections = new Reflections("club.magiccrazyman.ddns.components"); //使用反射搜索组件
+        Set<Class<? extends ComponentInterface>> clazz = reflections.getSubTypesOf(ComponentInterface.class);
+        ArrayList<Class<? extends ComponentInterface>> arrs = new ArrayList<>(clazz);
+        arrs.forEach((arr) -> {
+            try {
+                ComponentInterface component = (ComponentInterface) arr.newInstance();
+                COMPONENTS.put(component.name(), component);
+            } catch (InstantiationException | IllegalAccessException ex) {
+                java.util.logging.Logger.getLogger(Command.class.getName()).log(Level.SEVERE, null, ex);
             }
-        }
+        });
+        
+        COMPONENTS.values().forEach((component) -> {
+            component.register(this);
+        });
+        isInit = true;
+    }
 
-        private void listen() {
-            Scanner scanner = new Scanner(System.in);
-            String[] input = scanner.nextLine().trim().replaceAll("\\s+", " ").split(" ");
-            String command = input[0];
-            String[] args = Arrays.copyOfRange(input, 1, input.length);
+    //初始化外部组件
+    private void initExternalComponents() {
 
-            if (!command.equals("")) {
-                LOGGER_DDNS.info(String.format("检测到命令：%s", command));
-                switch (command) {
-                    case "help":
-                        helpCommand();
-                        break;
-                    case "stop":
-                        stopCommand();
-                        break;
-                    case "list":
-                        listCommand();
-                        break;
-                    case "reload":
-                        reloadCommand();
-                        break;
-                    case "update":
-                        updateCommand(args);
-                        break;
-                    default:
-                        LOGGER_DDNS.info(String.format("未知命令 %s ,输入 help 以查看更多命令", command));
-                        break;
-                }
-            }
-        }
+    }
 
-        private void helpCommand() {
-            StringBuilder sb = new StringBuilder();
-            ArrayList<String> keys = new ArrayList(commands.keySet());
-            for (int i = 0; i < keys.size(); i++) {
-                sb.append(String.format("%-8s %s", keys.get(i), commands.get(keys.get(i))));
-                if (i < keys.size() - 1) {
-                    sb.append(System.lineSeparator());
-                }
-            }
-            System.out.println(sb);
-        }
+    private void startComponents() {
 
-        private void stopCommand() {
-
-            UPDATE_THREADS.values().forEach((t) -> {
-                LOGGER_DDNS.info(String.format("正在中止线程 %s ...", t.getName()));
-                t.interrupt();
-            });
-            LOGGER_DDNS.info("程序中止");
-            System.exit(0);
-        }
-
-        private void listCommand() {
-
-            StringBuilder str = new StringBuilder("以下线程正在运行：");
-            UPDATE_THREADS.keySet().forEach((k) -> {
-                str.append(k).append(" ");
-            });
-            LOGGER_DDNS.info(str);
-        }
-
-        private void reloadCommand() {
-
-            LOGGER_DDNS.info("正在重新读取配置并重启...");
-            UPDATE_THREADS.values().forEach((t) -> {
-                t.interrupt();
-            });
-            Main.main(Main.inputArgs);
-            Thread.currentThread().interrupt();
-        }
-
-        private void updateCommand(String[] targetAll) {
-
-            for (String target : targetAll) {
-                if (UPDATE_RUNNABLE.containsKey(target)) {
-                    LOGGER_DDNS.info(String.format("正在强制更新域名线程 %s", target));
-                    Thread t = new Thread(() -> {
-                        ((UpdateRunnable) UPDATE_RUNNABLE.get(target)).updateDNS();
-                    });
-                    t.setName(String.format("temp_%s", target));
-                    t.start();
-                } else {
-                    LOGGER_DDNS.error(String.format("无效线程 %s", target));
-                }
-            }
-        }
+        COMPONENTS.values().forEach((component) -> {
+            Thread t = new Thread(component);
+            t.setName(component.name());
+            t.start();
+        });
     }
 
     //A domain update thread
@@ -434,5 +362,17 @@ public class DDNS {
 
             String ip;
         }
+    }
+
+    public Thread getUpdateThread(String threadName) {
+        if (UPDATE_THREADS.containsKey(threadName)) {
+            return UPDATE_THREADS.get(threadName);
+        } else {
+            return null;
+        }
+    }
+
+    public HashMap<String, Thread> getAllUpdateThreads() {
+        return UPDATE_THREADS;
     }
 }

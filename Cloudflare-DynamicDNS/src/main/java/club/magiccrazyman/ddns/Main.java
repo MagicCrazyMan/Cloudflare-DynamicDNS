@@ -16,6 +16,8 @@
  */
 package club.magiccrazyman.ddns;
 
+import club.magiccrazyman.ddns.core.Configuration;
+import club.magiccrazyman.ddns.core.DDNS;
 import club.magiccrazyman.ddns.tools.BuildConfigurationJson;
 import club.magiccrazyman.ddns.tools.ListDNSRecordDetails;
 import java.util.logging.Level;
@@ -36,17 +38,19 @@ public class Main {
     /**
      * Development version
      */
-    public final static String VERSION = "2.2.1";
+    public final static String VERSION = "2.3.0";
 
-    static String[] inputArgs = null;
     private static String config = "config.json";
     private static boolean isBaidu = false;
     private static boolean start = true;
+
+    public static String[] inputArgs = null;
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        inputArgs = args;
         CLI(args);
         if (start == true) {
             new DDNS(Configuration.initConfiguration(config, isBaidu)).startDDNS();
@@ -55,7 +59,6 @@ public class Main {
 
     private static void CLI(String[] args) {
         try {
-            inputArgs = args;
 
             Options options = new Options();
             options.addOption(Option.builder("h")

@@ -16,9 +16,9 @@
  */
 package club.magiccrazyman.ddns.tools;
 
-import club.magiccrazyman.ddns.Configuration;
-import club.magiccrazyman.ddns.Configuration.Account;
-import club.magiccrazyman.ddns.Configuration.Account.Domain;
+import club.magiccrazyman.ddns.core.Configuration;
+import club.magiccrazyman.ddns.core.Configuration.Account;
+import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Console;

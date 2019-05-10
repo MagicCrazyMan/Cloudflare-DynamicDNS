@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package club.magiccrazyman.ddns;
+package club.magiccrazyman.ddns.core;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -270,7 +270,7 @@ public class Configuration {
         LOGGER_EX.error("可以使用自带的工具创建配置文件");
     }
 
-    boolean isBaidu;
+    public boolean isBaidu;
     /**
      * An URL where can get your Intenet IP Address
      * <p>
