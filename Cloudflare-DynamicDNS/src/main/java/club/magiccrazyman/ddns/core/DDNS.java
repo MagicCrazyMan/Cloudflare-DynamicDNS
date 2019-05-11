@@ -74,9 +74,6 @@ public class DDNS {
     public void startDDNS() {
         if (CONFIG != null && isInit) {
             LOGGER_DDNS.info("DDNS 正在初始化...");
-            if (CONFIG.isBaidu) {
-                LOGGER_DDNS.info("检测到你正在使用百度获取网络IP地址，建议使用可信任的主机自行搭建IP查询网页");
-            }
             this.CONFIG.accounts.forEach((a) -> {
                 a.domains.forEach((d) -> {
                     //启动域名更新线程
