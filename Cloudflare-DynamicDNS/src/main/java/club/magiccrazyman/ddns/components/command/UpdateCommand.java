@@ -23,7 +23,7 @@ public class UpdateCommand implements CommandInterface {
 
     @Override
     public void register(Command command) {
-        threads = command.getDDNSInstance().getAllUpdateThreads();
+        threads = command.getDDNSInstance().getUpdateThreads();
     }
 
     @Override

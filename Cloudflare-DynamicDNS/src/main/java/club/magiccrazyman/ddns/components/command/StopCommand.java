@@ -1,6 +1,5 @@
 package club.magiccrazyman.ddns.components.command;
 
-import club.magiccrazyman.ddns.core.DDNS;
 import java.util.HashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +18,7 @@ public class StopCommand implements CommandInterface {
 
     @Override
     public void register(Command command) {
-        threads = command.getDDNSInstance().getAllUpdateThreads();
+        threads = command.getDDNSInstance().getUpdateThreads();
     }
 
     @Override
