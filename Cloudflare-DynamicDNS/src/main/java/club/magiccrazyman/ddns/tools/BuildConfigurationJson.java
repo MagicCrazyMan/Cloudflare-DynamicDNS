@@ -38,7 +38,7 @@ public class BuildConfigurationJson {
     /**
      * Tools development version
      */
-    public static final String VERSION = "1.0.2";
+    public static final String VERSION = "1.0.3";
 
     private static final Console CONSOLE = System.console();
 
@@ -52,6 +52,8 @@ public class BuildConfigurationJson {
 
         System.out.println("开始设置全局变量");
         json.whereGetYourIP = CONSOLE.readLine("指定获取本机IP的URL(若无并使用百度作为搜索来源请留空)：");
+        json.enablePassiveUpdateModule = CONSOLE.readLine("是否使用被动更新模式模块?(y/N)").toLowerCase().equals("y");
+        json.passiveUpdatePort = json.enablePassiveUpdateModule ? readInt(CONSOLE.readLine("被动模式下启用HTTP服务器的端口：")) : 0;
         json.defaultSleepSconds = readInt(CONSOLE.readLine("指定成功更新后等待的时间(秒)："));
         json.failedSleepSeconds = readInt(CONSOLE.readLine("指定任意失败后等待重试的时间(秒)："));
         System.out.println("全局变量设置完毕");
@@ -71,6 +73,8 @@ public class BuildConfigurationJson {
                 System.out.println("开始设置域名信息");
 
                 Domain domain = new Domain();
+                domain.passiveUpdate = CONSOLE.readLine("是否使用被动更新模式?(y/N)").toLowerCase().equals("y");
+                domain.passiveUpdateID = domain.passiveUpdate ? CONSOLE.readLine("被动模式下的唯一辨识号：") : "";
                 domain.zone = String.valueOf(CONSOLE.readLine("目标域名属下的zone："));
                 domain.identifier = String.valueOf(CONSOLE.readLine("目标域名的identifier："));
                 for (String type = ""; !Configuration.VALID_TYPE.contains(type);) {

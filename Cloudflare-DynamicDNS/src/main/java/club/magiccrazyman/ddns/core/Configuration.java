@@ -225,6 +225,7 @@ public class Configuration {
         A1.email = "example1@example1.com";
         A1.key = "Cloudflare SecretKey";
         Account.Domain domain1 = new Account.Domain();
+        domain1.passiveUpdate = false;
         domain1.nickname = "nickname 1";
         domain1.zone = "Cloudflare DNS Zone";
         domain1.identifier = "Cloudflare DNS domain identifier";
@@ -237,6 +238,7 @@ public class Configuration {
         A2.email = "example2@example2.com";
         A2.key = "Cloudflare SecretKey";
         Account.Domain domain2 = new Account.Domain();
+        domain2.passiveUpdate = false;
         domain2.nickname = "nickname 2";
         domain2.zone = "Cloudflare DNS Zone";
         domain2.identifier = "Cloudflare DNS domain identifier";
@@ -280,6 +282,11 @@ public class Configuration {
     @Expose
     public String whereGetYourIP;
 
+    @Expose
+    public boolean enablePassiveUpdateModule;
+
+    @Expose
+    public int passiveUpdatePort;
     /**
      * path of the log files
      * <p>
@@ -347,6 +354,11 @@ public class Configuration {
             @Expose
             public String nickname;
 
+            @Expose
+            public boolean passiveUpdate;
+
+            @Expose
+            public String passiveUpdateID;
             /**
              * Zone ID of root domain
              */

@@ -19,6 +19,7 @@ package club.magiccrazyman.ddns.core;
 import club.magiccrazyman.ddns.components.ComponentAbstract;
 import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
 import club.magiccrazyman.ddns.components.command.Command;
+import club.magiccrazyman.ddns.components.passiveupdate.PassiveUpdate;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.FileNotFoundException;
@@ -102,7 +103,7 @@ public class DDNS {
                 java.util.logging.Logger.getLogger(Command.class.getName()).log(Level.SEVERE, null, ex);
             }
         });
-        
+
         COMPONENTS.values().forEach((component) -> {
             component.register(this);
         });
@@ -124,7 +125,7 @@ public class DDNS {
     }
 
     //A domain update thread
-    class UpdateRunnable implements Runnable {
+    public class UpdateRunnable implements Runnable {
 
         private final Domain DOMAIN;
         private final String DOMAIN_NAME;
@@ -152,12 +153,12 @@ public class DDNS {
                 json = gson.fromJson(conn.execute().body(), CloudflareResponseJson.class);
             } catch (IOException ex) {
                 LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
-                LOGGER_EX.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
+                LOGGER_EX.error(ex);
             }
             DOMAIN_NAME = json.result.name;
             domainIP = json.result.content;
 
-            getSourceType();
+            setSourceType();
         }
 
         @Override
@@ -171,7 +172,7 @@ public class DDNS {
 
         private void updateDNS() {
             try {
-                getLocalIP();
+                setLocalIP();
 
                 if (localIP != null && domainIP != null) {
                     if (!localIP.equals(domainIP)) {
@@ -206,6 +207,9 @@ public class DDNS {
                         LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN_NAME, CONFIG.defaultSleepSconds));
                         sleep(CONFIG.defaultSleepSconds * 1000);
                     }
+                } else {
+                    LOGGER_DDNS.info(String.format("域名 %s 未能获取新IP地址, 将睡眠 %s 秒", DOMAIN_NAME, CONFIG.failedSleepSeconds));
+                    sleep(CONFIG.failedSleepSeconds * 1000);
                 }
             } catch (IOException ex) {
                 LOGGER_DDNS.error(String.format("进程发生致命故障，但未中断，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
@@ -214,11 +218,14 @@ public class DDNS {
             }
         }
 
-        private void getLocalIP() {
+        private void setLocalIP() {
 
             switch (sourceType) {
                 case "baidu":
                     getIPviaBaidu();
+                    break;
+                case "passive":
+                    getIPviaPassive();
                     break;
                 case "http":
                     getIPviaHtttp();
@@ -233,9 +240,11 @@ public class DDNS {
             }
         }
 
-        private void getSourceType() {
+        private void setSourceType() {
             if (CONFIG.isBaidu) {
                 sourceType = "baidu";
+            } else if (DOMAIN.passiveUpdate) {
+                sourceType = "passive";
             } else if (CONFIG.whereGetYourIP.startsWith("http://") || CONFIG.whereGetYourIP.startsWith("https://")) {
                 sourceType = "http";
             } else if (CONFIG.whereGetYourIP.endsWith(".js")) {
@@ -295,6 +304,11 @@ public class DDNS {
             }
         }
 
+        private void getIPviaPassive() {
+            PassiveUpdate com = (PassiveUpdate) COMPONENTS.get("passiveUpdate");
+            localIP = com.getIP(DOMAIN.passiveUpdateID);
+        }
+
         private void sleep(long time) {
             try {
                 Thread.sleep(time);
@@ -313,7 +327,7 @@ public class DDNS {
             }
             return builder.toString();
         }
-
+        
         class UpdateJson {
 
             String type;
@@ -369,7 +383,24 @@ public class DDNS {
         }
     }
 
-    public HashMap<String, Thread> getAllUpdateThreads() {
+    public HashMap<String, Thread> getUpdateThreads() {
         return UPDATE_THREADS;
     }
+
+    public ComponentAbstract getComponent(String name) {
+        if (COMPONENTS.containsKey(name)) {
+            return COMPONENTS.get(name);
+        } else {
+            return null;
+        }
+    }
+
+    public HashMap<String, ComponentAbstract> getComponents() {
+        return COMPONENTS;
+    }
+
+    public Configuration getCONFIG() {
+        return CONFIG;
+    }
+
 }
