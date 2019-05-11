@@ -28,9 +28,7 @@ public class UpdateCommand implements CommandInterface {
 
     @Override
     public void exec(String[] args) {
-        Iterator<String> targetAll = threads.keySet().iterator();
-        while (targetAll.hasNext()) {
-            String target = targetAll.next();
+        for (String target : args) {
             if (threads.containsKey(target)) {
                 LOGGER_DDNS.info(String.format("正在强制更新域名线程 %s", target));
 
@@ -39,7 +37,7 @@ public class UpdateCommand implements CommandInterface {
                     Thread updateThread = threads.get(target);
                     Field field = updateThread.getClass().getDeclaredField("target");
                     field.setAccessible(true);
-                    Runnable runnable = (Runnable)field.get(updateThread);
+                    Runnable runnable = (Runnable) field.get(updateThread);
                     Method method = runnable.getClass().getDeclaredMethod("updateDNS");
                     method.setAccessible(true);
                     Thread t = new Thread(() -> {
