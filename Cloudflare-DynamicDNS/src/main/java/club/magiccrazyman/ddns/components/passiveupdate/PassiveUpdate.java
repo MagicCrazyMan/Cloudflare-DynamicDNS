@@ -76,7 +76,7 @@ public class PassiveUpdate extends ComponentAbstract {
         @Override
         public void handle(HttpExchange t) throws IOException {
             try (OutputStream os = t.getResponseBody()) {
-
+                
                 String idIn = t.getRequestHeaders().getFirst("id");
                 if (id2ip.containsKey(idIn)) {
                     String ip = t.getRequestHeaders().getFirst("ip");

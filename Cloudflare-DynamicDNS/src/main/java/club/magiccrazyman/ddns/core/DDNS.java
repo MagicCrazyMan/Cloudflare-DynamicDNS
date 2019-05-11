@@ -74,6 +74,9 @@ public class DDNS {
      */
     public void startDDNS() {
         if (CONFIG != null && isInit) {
+            //启动组件
+            startComponents();
+            
             LOGGER_DDNS.info("DDNS 正在初始化...");
             this.CONFIG.accounts.forEach((a) -> {
                 a.domains.forEach((d) -> {
@@ -85,8 +88,6 @@ public class DDNS {
                     t.start();
                 });
             });
-            //启动组件
-            startComponents();
         }
     }
 
@@ -327,7 +328,7 @@ public class DDNS {
             }
             return builder.toString();
         }
-        
+
         class UpdateJson {
 
             String type;
