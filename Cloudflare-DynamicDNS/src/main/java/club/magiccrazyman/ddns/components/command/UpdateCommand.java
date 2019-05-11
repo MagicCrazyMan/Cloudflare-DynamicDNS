@@ -22,8 +22,8 @@ public class UpdateCommand implements CommandInterface {
     private HashMap<String, Thread> threads;
 
     @Override
-    public void register(Command commandInstance) {
-        threads = commandInstance.getDDNSInstance().getAllUpdateThreads();
+    public void register(Command command) {
+        threads = command.getDDNSInstance().getAllUpdateThreads();
     }
 
     @Override
@@ -35,6 +35,7 @@ public class UpdateCommand implements CommandInterface {
                 LOGGER_DDNS.info(String.format("正在强制更新域名线程 %s", target));
 
                 try {
+                    //反射获取更新线程的Runnable并执行updateDNS方法
                     Thread updateThread = threads.get(target);
                     Field field = updateThread.getClass().getDeclaredField("target");
                     field.setAccessible(true);

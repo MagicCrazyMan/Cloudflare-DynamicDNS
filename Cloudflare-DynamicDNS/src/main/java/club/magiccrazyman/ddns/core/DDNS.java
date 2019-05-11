@@ -16,7 +16,7 @@
  */
 package club.magiccrazyman.ddns.core;
 
-import club.magiccrazyman.ddns.components.ComponentInterface;
+import club.magiccrazyman.ddns.components.ComponentAbstract;
 import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
 import club.magiccrazyman.ddns.components.command.Command;
 import com.google.gson.Gson;
@@ -52,7 +52,7 @@ public class DDNS {
 
     private final Configuration CONFIG;
     private final HashMap<String, Thread> UPDATE_THREADS = new HashMap<>();
-    private final HashMap<String, ComponentInterface> COMPONENTS = new HashMap<>();
+    private final HashMap<String, ComponentAbstract> COMPONENTS = new HashMap<>();
 
     private boolean isInit = false;
 
@@ -92,11 +92,11 @@ public class DDNS {
     //初始化内置组件
     private void initInternalComponents() {
         Reflections reflections = new Reflections("club.magiccrazyman.ddns.components"); //使用反射搜索组件
-        Set<Class<? extends ComponentInterface>> clazz = reflections.getSubTypesOf(ComponentInterface.class);
-        ArrayList<Class<? extends ComponentInterface>> arrs = new ArrayList<>(clazz);
+        Set<Class<? extends ComponentAbstract>> clazz = reflections.getSubTypesOf(ComponentAbstract.class);
+        ArrayList<Class<? extends ComponentAbstract>> arrs = new ArrayList<>(clazz);
         arrs.forEach((arr) -> {
             try {
-                ComponentInterface component = (ComponentInterface) arr.newInstance();
+                ComponentAbstract component = (ComponentAbstract) arr.newInstance();
                 COMPONENTS.put(component.name(), component);
             } catch (InstantiationException | IllegalAccessException ex) {
                 java.util.logging.Logger.getLogger(Command.class.getName()).log(Level.SEVERE, null, ex);

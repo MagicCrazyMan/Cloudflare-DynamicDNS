@@ -8,7 +8,9 @@ import club.magiccrazyman.ddns.core.DDNS;
  */
 public interface ComponentInterface extends Runnable {
 
-    public void register(DDNS ddnsInstance);
+    public void register(DDNS ddns);
+    
+    public void exec();
     
     public String name();
 }

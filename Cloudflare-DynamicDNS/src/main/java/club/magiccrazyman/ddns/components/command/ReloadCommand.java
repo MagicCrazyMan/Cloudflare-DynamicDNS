@@ -18,8 +18,8 @@ public class ReloadCommand implements CommandInterface {
     private HashMap<String, Thread> threads;
 
     @Override
-    public void register(Command commandInstance) {
-        threads = commandInstance.getDDNSInstance().getAllUpdateThreads();
+    public void register(Command command) {
+        threads = command.getDDNSInstance().getAllUpdateThreads();
     }
 
     @Override

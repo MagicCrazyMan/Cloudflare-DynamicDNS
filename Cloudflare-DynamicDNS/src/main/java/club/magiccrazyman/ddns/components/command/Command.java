@@ -1,6 +1,6 @@
 package club.magiccrazyman.ddns.components.command;
 
-import club.magiccrazyman.ddns.components.ComponentInterface;
+import club.magiccrazyman.ddns.components.ComponentAbstract;
 import club.magiccrazyman.ddns.core.DDNS;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,7 +17,7 @@ import org.reflections.Reflections;
  *
  * @author Magic Crazy Man
  */
-public class Command implements ComponentInterface {
+public class Command extends ComponentAbstract {
 
     private final static Logger LOGGER_DDNS = ((LoggerContext) LogManager.getContext()).getLogger("ddns");
     private final static Logger LOGGER_EX = ((LoggerContext) LogManager.getContext()).getLogger("exception");
@@ -27,8 +27,8 @@ public class Command implements ComponentInterface {
     private boolean isInit = false;
 
     @Override
-    public void register(DDNS ddnsInstance) {
-        DDNS = ddnsInstance;
+    public void register(DDNS ddns) {
+        DDNS = ddns;
         initInternalCommand();
         initExternalCommand();
     }
@@ -39,7 +39,7 @@ public class Command implements ComponentInterface {
     }
 
     @Override
-    public void run() {
+    public void exec() {
         if (isInit) {
             while (!Thread.currentThread().isInterrupted()) {
                 listen();

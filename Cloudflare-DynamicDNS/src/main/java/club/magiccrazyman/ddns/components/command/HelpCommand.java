@@ -35,8 +35,8 @@ public class HelpCommand implements CommandInterface {
     }
 
     @Override
-    public void register(Command commandInstance) {
-        commands = commandInstance.getAllCommands();
+    public void register(Command command) {
+        commands = command.getAllCommands();
     }
 
 }

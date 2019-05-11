@@ -6,7 +6,7 @@ package club.magiccrazyman.ddns.components.command;
  */
 public interface CommandInterface {
 
-    public void register(Command commandInstance);
+    public void register(Command command);
 
     public void exec(String[] args);
     
