@@ -1,6 +1,7 @@
 package club.magiccrazyman.ddns.components.passiveupdate;
 
 import club.magiccrazyman.ddns.components.ComponentAbstract;
+import club.magiccrazyman.ddns.core.Configuration;
 import club.magiccrazyman.ddns.core.Configuration.Account;
 import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
 import club.magiccrazyman.ddns.core.DDNS;
@@ -25,21 +26,25 @@ public class PassiveUpdate extends ComponentAbstract {
     private final static org.apache.logging.log4j.Logger LOGGER_DDNS = ((LoggerContext) LogManager.getContext()).getLogger("ddns");
     private final static org.apache.logging.log4j.Logger LOGGER_EX = ((LoggerContext) LogManager.getContext()).getLogger("exception");
 
+    private Configuration config;
     private int port = 0;
     private boolean isExec = false;
+    private boolean firstStart = false;
     private HashMap<String, String> id2ip = new HashMap<>();
 
     @Override
     public void register(DDNS ddns) {
         disable();
-        if (ddns.getCONFIG().enablePassiveUpdateModule) {
+        config = ddns.getCONFIG();
+        if (config.enablePassiveUpdateModule) {
             enable();
-            port = ddns.getCONFIG().passiveUpdatePort;
-            for (Account account : ddns.getCONFIG().accounts) {
+            port = config.passiveUpdatePort;
+            for (Account account : config.accounts) {
                 for (Domain domain0 : account.domains) {
                     if (domain0.passiveUpdate) {
                         enable();
                         id2ip.put(domain0.passiveUpdateID, null);
+                        firstStart = true;
                         break;
                     }
                 }
@@ -75,12 +80,14 @@ public class PassiveUpdate extends ComponentAbstract {
                 String idIn = t.getRequestHeaders().getFirst("id");
                 if (id2ip.containsKey(idIn)) {
                     String ip = t.getRequestHeaders().getFirst("ip");
-                    id2ip.replace(idIn, ip);
-                    if (!ip.isEmpty() || ip != null) {
+                    if (!ip.isEmpty() && ip != null) {
+                        if (!ip.equals(id2ip.get(idIn))) {
+                            id2ip.replace(idIn, ip);
+                            LOGGER_DDNS.info(String.format("辨识号 %s 所指向域名被动更新为 %s ，更新线程结束休眠后将更新域名", idIn, ip));
+                        }
                         String response = "successed " + ip;
                         t.sendResponseHeaders(200, response.length());
                         os.write(response.getBytes());
-                        LOGGER_DDNS.info(String.format("辨识号 %s 所指向域名被动更新为 %s ，更新线程结束休眠后将更新域名", idIn, ip));
                     } else {
                         String response = "failed";
                         t.sendResponseHeaders(200, response.length());
@@ -93,7 +100,16 @@ public class PassiveUpdate extends ComponentAbstract {
 
     public String getIP(String id) {
         if (isExec) {
-            if (id2ip.containsKey(id)) {
+            if (firstStart) {
+                try {
+                    LOGGER_DDNS.info(String.format("首次启动等待 %s 秒后再执行更新", config.defaultSleepSconds));
+                    firstStart = false;
+                    Thread.sleep(config.defaultSleepSconds * 1000);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(PassiveUpdate.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                return id2ip.get(id);
+            } else if (id2ip.containsKey(id)) {
                 return id2ip.get(id);
             } else {
                 return null;
