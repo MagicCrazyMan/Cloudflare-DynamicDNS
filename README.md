@@ -74,13 +74,13 @@
     |-(String) email  //Cloudflare Account 对应的 Email
     |-(String) key  //Cloudflare Account 对应的 Global API Key
     |-(ArrayList<Domain>) Domains   //包含所有该 Cloudflare Account 下需要动态更新的域名的 ArrayList
-      |-(String) nickname   //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
-      |-(String) domain   //域名的完整名称
-      |-(String) zone   //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
-      |-(String) identifier   //该域名的 identifier ID
-      |-(String) type   //该域名的类型
-      |-(int) ttl   //该域名的TTL值
-      |-(boolean) proixed   //是否使用 Cloudflare CDN代理</pre></code>  
+        |-(String) nickname   //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
+        |-(String) domain   //域名的完整名称
+        |-(String) zone   //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
+        |-(String) identifier   //该域名的 identifier ID
+        |-(String) type   //该域名的类型
+        |-(int) ttl   //该域名的TTL值
+        |-(boolean) proixed   //是否使用 Cloudflare CDN代理</pre></code>  
 <ul>注意：
   <li>一个配置文件可以含有多个 Cloudflare Account，每一个账户有一个对应的 Email 和 Global API Key</li>
   <li>一个 Cloudflare Account 可以含有多个 Domain，每一个 Domain 都有自己对应的信息</li>
