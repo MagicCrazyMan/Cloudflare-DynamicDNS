@@ -1,5 +1,5 @@
 # Cloudflare-DynamicDNS
-<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.2.1</strong></p>
+<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.3.0</strong></p>
 <p><i>
   该应用暂时只有<strong>中文</strong>版本！
   </br>
@@ -13,7 +13,7 @@
 <ol>
   <li>使用 Cloudflare Web API，理论上支持所有由 Cloudflare Web API 提供的功能</li>
   <li>基于Java的跨平台特性,一次配置即可跨平台使用。<strong>需注意关于文件配置可能需要进行一定的修改</strong></li>
-  <li>支持 <code><strong>Http/Https</strong></code>, <code><strong>JavaScript</strong></code> 进行IP地址获取。同时提供了从百度搜索获取IP的全能获取方式，但它不安全</li>
+  <li>支持 <code><strong>Http/Https</strong></code>, <code><strong>JavaScript</strong></code>,  <code><strong>被动模式</strong></code> 进行IP地址获取。同时提供了从百度搜索获取IP的全能获取方式，但它不安全</li>
   <li>基本的程序内控制台命令功能</li>
   <li>理论上支持IPv4及IPv6，但还没进行过测试</li>
 </ol>
@@ -66,21 +66,25 @@
   有点复杂，希望你不会看晕
 </p>
 <pre><code>ConfigurationJson
-|-(String) whereGetYourIP   //全局变量，获取IP的地址
-|-(String) logFileHome    //全局变量，日志文件存放位置
-|-(int) defaultSleepSconds  //全局变量，默认线程休眠的时间，如ip未变更以及ttl为1(Automatic)是
-|-(int) failedSleepSeconds  //全局变量，发生错误后线程休眠的时间，如连接网络失败
-|-(ArrayList<Acccount>) accounts  //含有所有 Cloudflare Account 的 ArrayList
-    |-(String) email  //Cloudflare Account 对应的 Email
-    |-(String) key  //Cloudflare Account 对应的 Global API Key
-    |-(ArrayList<Domain>) Domains   //包含所有该 Cloudflare Account 下需要动态更新的域名的 ArrayList
-        |-(String) nickname   //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
-        |-(String) domain   //域名的完整名称
-        |-(String) zone   //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
-        |-(String) identifier   //该域名的 identifier ID
-        |-(String) type   //该域名的类型
-        |-(int) ttl   //该域名的TTL值
-        |-(boolean) proixed   //是否使用 Cloudflare CDN代理</pre></code>  
+|-(String) whereGetYourIP             //全局变量，获取IP的地址
+|-(boolean) enablePassiveUpdateModule //是否启用被动模式组件
+|-（int) passiveUpdatePort            //被动模式http服务器的端口
+|-(String) logFileHome                //全局变量，日志文件存放位置
+|-(int) defaultSleepSconds            //全局变量，默认线程休眠的时间，如ip未变更以及ttl为1(Automatic)是
+|-(int) failedSleepSeconds            //全局变量，发生错误后线程休眠的时间，如连接网络失败
+|-(ArrayList<Acccount>) accounts      //含有所有 Cloudflare Account 的 ArrayList
+    |-(String) email                  //Cloudflare Account 对应的 Email
+    |-(String) key                    //Cloudflare Account 对应的 Global API Key
+    |-(ArrayList<Domain>) Domains     //包含所有该 Cloudflare Account 下需要动态更新的域名的 ArrayList
+        |-(boolean) passiveUpdate     //是否启用被动模式更新域名
+        |-(String) passiveUpdateID    //被动模式的唯一辨识ID
+        |-(String) nickname           //为线程取一个你喜欢的名字，每一个域名都会有一个线程负责更新
+        |-(String) domain             //域名的完整名称
+        |-(String) zone               //根域名的 ZoneID，每一个根域名都会一个唯一的Zone ID
+        |-(String) identifier         //该域名的 identifier ID
+        |-(String) type               //该域名的类型
+        |-(int) ttl                   //该域名的TTL值
+        |-(boolean) proixed           //是否使用 Cloudflare CDN代理</pre></code>  
 <ul>注意：
   <li>一个配置文件可以含有多个 Cloudflare Account，每一个账户有一个对应的 Email 和 Global API Key</li>
   <li>一个 Cloudflare Account 可以含有多个 Domain，每一个 Domain 都有自己对应的信息</li>
@@ -134,8 +138,46 @@
     }</code>
     </p>
   </li>
+  
+  <li>
+    <h4>被动模式</h4>
+    <p>被动模式详细看下面</p>
+  </li> 
 </ol>
 
+<h3>被动模式</h3>
+<p><strong>被动模式现仍在测试和完善阶段，不保证稳定性和易用性，且日后有可能会出现大幅度修改</strong></p>
+<p><strong>如何使用</strong>
+  </br>
+  <ol>
+    <li>配置文件中将 <code>enablePassiveUpdateModule</code> 项设为 <code>true</code>，并指定 <code>passiveUpdatePort</code> 一个空闲端口值</li>
+    <li>在需要使用被动模式的域名种将 <code>passiveUpdate</code> 设为 <code>true</code>，并为 <code>passiveUpdateID</code> 指定一个唯一辨识ID</li>
+  <li>启动DDNS服务</li>
+  <li>在目标设备中发送request至 <code>http://yourip.or.yourdomain:passiveUpdatePort/ip</code>，且需要设定request header包含ip和id两项内容，分别输入目标ip值和passiveUpdateID值</li>
+  <li>等待DDNS更新即可</li>
+  </ol>
+</p>
+<p><strong>What's 被动模式?</strong>
+  </br>
+  被动模式是指通过外部的某些方式(如现版本是通过http)提供某个域名的IP记录值，然后本机进行域名更新的模式。
+  </br>
+  主要的区别就在于本程序不主动获取IP，只要外部不提供新域名，域名就不会更新
+  </br>
+</p>
+<p><strong>这有什么意义?</strong>
+  </br>
+  开发这个模式的初衷很简单，就是为了可以不在某个不可信任设备上留下完整的 Cloudflare 账户配置信息的情况下更新该不可信任设备的域名记录
+  </br>
+  只要用过的这个软件就会知道，启动一个基本的DDNS服务需要提供一个拥有完整的JSON配置文件，配置文件内包含了 Cloudflare 账户的机密信息，因此在一个不可信任的设备上启动DDNS是非常不安全的。
+  </br>
+  这个模式的出现就解决了这个问题，在不信任设备上你只需要通过某种方式(现版本仅有http)发送需要更新的IP记录值到一台可信任的设备上，由可信任设备上的DDNS服务进行域名更新即可
+</p>
+<p><strong>更长远而言</strong>
+  </br>
+  这个模式有可能会突破这个软件本身设计的初衷：在一个动态IP的网络环境下进行动态域名更新
+  </br>
+  该模式一旦完善，就可以成为集中式的DNS更新的解决方案
+</p>
 
 <h3>开发依赖</h3>
 <ol>
@@ -143,6 +185,7 @@
   <li>Jsoup 1.11.3</li>
   <li>Apache log4j 2.11.2</li>
   <li>Apache Commons CLI 1.4</li>
+  <li>Reflections 0.9.11</li>
 </ol>
   
 <h3>已知问题</h3>
