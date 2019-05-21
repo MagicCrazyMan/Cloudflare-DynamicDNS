@@ -38,7 +38,7 @@ public class Main {
     /**
      * Development version
      */
-    public final static String VERSION = "2.3.0";
+    public final static String VERSION = "2.3.1";
 
     private static String config = "config.json";
     private static boolean isBaidu = false;
