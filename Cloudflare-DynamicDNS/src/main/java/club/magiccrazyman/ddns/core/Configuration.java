@@ -16,9 +16,17 @@
  */
 package club.magiccrazyman.ddns.core;
 
+import com.google.gson.ExclusionStrategy;
+import com.google.gson.FieldAttributes;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonStreamParser;
 import com.google.gson.annotations.Expose;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,10 +35,14 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -137,13 +149,13 @@ public class Configuration {
     /**
      * inits the configurations and create an Configuration instance
      *
-     * @param config path of the config file
+     * @param configLocation path of the config file
      * @param isBaidu whether use baidu for getting IP or not
      * @return if config exists, return an Configuration instance, otherwise
      * return null and create a template.json file at current folder
      */
-    public static Configuration initConfiguration(String config, boolean isBaidu) {
-        File configFile = new File(config);
+    public static Configuration initConfiguration(String configLocation, boolean isBaidu) {
+        File configFile = new File(configLocation);
 
         if (configFile.exists()) {
             return readConfiguraation(configFile, isBaidu);
@@ -154,7 +166,9 @@ public class Configuration {
     }
 
     private static Configuration readConfiguraation(File configFile, boolean isBaidu) {
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+        Gson gson = new GsonBuilder()
+                .excludeFieldsWithoutExposeAnnotation()
+                .create();
         Configuration configJson = null;
 
         FileReader fr;
@@ -176,7 +190,6 @@ public class Configuration {
             configJson.isBaidu = isBaidu;
 
             changeLoggerHome(configJson, (LoggerContext) LogManager.getContext());
-
         } catch (FileNotFoundException ex) {
             java.util.logging.Logger.getLogger(DDNS.class.getName()).log(Level.SEVERE, null, ex);
         } catch (IOException ex) {
