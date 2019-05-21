@@ -19,7 +19,6 @@ package club.magiccrazyman.ddns.tools;
 import club.magiccrazyman.ddns.core.Configuration;
 import club.magiccrazyman.ddns.core.Configuration.Account;
 import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
-import static club.magiccrazyman.ddns.tools.BuildConfigurationJson.readInt;
 import club.magiccrazyman.ddns.tools.ListDNSRecordDetails.CloudflareResponseJson.Result;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -123,7 +122,7 @@ public class ListDNSRecordDetails {
         System.out.println("开始设定全局变量");
         configJson.whereGetYourIP = CONSOLE.readLine("指定获取本机IP的URL(若无并使用百度作为搜索来源请留空)：");
         configJson.enablePassiveUpdateModule = CONSOLE.readLine("是否使用被动更新模式模块?(y/N)").toLowerCase().equals("y");
-        configJson.passiveUpdatePort = configJson.enablePassiveUpdateModule ? readInt(CONSOLE.readLine("被动模式下启用HTTP服务器的端口：")) : 0;
+        configJson.passiveUpdatePort = configJson.enablePassiveUpdateModule ? BuildConfigurationJson.readInt(CONSOLE.readLine("被动模式下启用HTTP服务器的端口：")) : 0;
         configJson.logFileHome = CONSOLE.readLine("指定日志文件储存位置：");
         configJson.defaultSleepSconds = Integer.parseInt(CONSOLE.readLine("指定成功更新后等待的时间(秒)："));
         configJson.failedSleepSeconds = Integer.parseInt(CONSOLE.readLine("指定任意失败后等待重试的时间(秒)："));
