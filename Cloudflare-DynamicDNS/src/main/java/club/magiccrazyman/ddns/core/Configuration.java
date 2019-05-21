@@ -71,7 +71,6 @@ import org.xml.sax.SAXException;
  */
 public class Configuration {
 
-    private final static Logger LOGGER_DDNS = ((LoggerContext) LogManager.getContext()).getLogger("ddns");
     private final static Logger LOGGER_EX = ((LoggerContext) LogManager.getContext()).getLogger("exception");
 
     /**

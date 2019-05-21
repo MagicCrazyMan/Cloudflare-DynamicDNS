@@ -36,7 +36,6 @@ import org.reflections.Reflections;
 public class Command extends ComponentAbstract {
 
     private final static Logger LOGGER_DDNS = ((LoggerContext) LogManager.getContext()).getLogger("ddns");
-    private final static Logger LOGGER_EX = ((LoggerContext) LogManager.getContext()).getLogger("exception");
 
     private final HashMap<String, CommandInterface> COMMANDS = new HashMap<>();
     private DDNS DDNS;
@@ -114,10 +113,6 @@ public class Command extends ComponentAbstract {
     }
 
     public CommandInterface getCommand(String name) {
-        if (COMMANDS.containsKey(name)) {
-            return COMMANDS.get(name);
-        } else {
-            return null;
-        }
+        return COMMANDS.get(name);
     }
 }
