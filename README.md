@@ -1,5 +1,5 @@
 # Cloudflare-DynamicDNS
-<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.3.0</strong></p>
+<p>基于Java的 Cloudflare DynamicDNS 命令行应用</br><strong>当前版本 2.3.1</strong></p>
 <p><i>
   该应用暂时只有<strong>中文</strong>版本！
   </br>
