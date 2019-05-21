@@ -44,9 +44,8 @@ public class PassiveUpdate extends ComponentAbstract {
 
     private Configuration config;
     private int port = 0;
-    private boolean isExec = false;
-    private boolean firstStart = false;
     private HashMap<String, String> id2ip = new HashMap<>();
+    private HashMap<String, Object> id2lock = new HashMap<>();
 
     @Override
     public void register(DDNS ddns) {
@@ -55,18 +54,16 @@ public class PassiveUpdate extends ComponentAbstract {
         if (config.enablePassiveUpdateModule) {
             enable();
             port = config.passiveUpdatePort;
-            for (Account account : config.accounts) {
-                for (Domain domain0 : account.domains) {
-                    if (domain0.passiveUpdate) {
-                        enable();
-                        id2ip.put(domain0.passiveUpdateID, null);
-                        firstStart = true;
+            for (Account a : config.accounts) {
+                for (Domain d : a.domains) {
+                    if (d.passiveUpdate) {
+                        id2ip.put(d.passiveUpdateID, null);
+                        id2lock.put(d.passiveUpdateID, new Object());
                         break;
                     }
                 }
             }
         }
-
     }
 
     @Override
@@ -82,9 +79,10 @@ public class PassiveUpdate extends ComponentAbstract {
             server.setExecutor(null); // creates a default executor
             server.start();
         } catch (IOException ex) {
+            LOGGER_EX.fatal("发生错误,进程已终止", ex);
             Logger.getLogger(PassiveUpdate.class.getName()).log(Level.SEVERE, null, ex);
+            System.exit(1);
         }
-        isExec = true;
     }
 
     class MyHandler implements HttpHandler {
@@ -92,14 +90,18 @@ public class PassiveUpdate extends ComponentAbstract {
         @Override
         public void handle(HttpExchange t) throws IOException {
             try (OutputStream os = t.getResponseBody()) {
-                
+
                 String idIn = t.getRequestHeaders().getFirst("id");
                 if (id2ip.containsKey(idIn)) {
                     String ip = t.getRequestHeaders().getFirst("ip");
                     if (!ip.isEmpty() && ip != null) {
                         if (!ip.equals(id2ip.get(idIn))) {
                             id2ip.replace(idIn, ip);
-                            LOGGER_DDNS.info(String.format("辨识号 %s 所指向域名被动更新为 %s ，更新线程结束休眠后将更新域名", idIn, ip));
+                            LOGGER_DDNS.info(String.format("辨识号 %s 所指向域名被动更新为 %s", idIn, ip));
+                            Object lock = id2lock.get(idIn);
+                            synchronized (lock) {
+                                lock.notify();
+                            }
                         }
                         String response = "successed " + ip;
                         t.sendResponseHeaders(200, response.length());
@@ -115,23 +117,10 @@ public class PassiveUpdate extends ComponentAbstract {
     }
 
     public String getIP(String id) {
-        if (isExec) {
-            if (firstStart) {
-                try {
-                    LOGGER_DDNS.info(String.format("首次启动等待 %s 秒后再执行更新", config.defaultSleepSconds));
-                    firstStart = false;
-                    Thread.sleep(config.defaultSleepSconds * 1000);
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(PassiveUpdate.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                return id2ip.get(id);
-            } else if (id2ip.containsKey(id)) {
-                return id2ip.get(id);
-            } else {
-                return null;
-            }
-        } else {
-            return null;
-        }
+        return id2ip.get(id);
+    }
+
+    public Object getLOCK(String id) {
+        return id2lock.get(id);
     }
 }

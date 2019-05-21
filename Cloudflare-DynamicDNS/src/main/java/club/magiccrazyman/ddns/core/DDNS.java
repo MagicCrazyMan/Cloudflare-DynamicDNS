@@ -76,19 +76,22 @@ public class DDNS {
         if (CONFIG != null && isInit) {
             //启动组件
             startComponents();
-            
-            LOGGER_DDNS.info("DDNS 正在初始化...");
-            this.CONFIG.accounts.forEach((a) -> {
-                a.domains.forEach((d) -> {
-                    //启动域名更新线程
-                    Runnable r = new UpdateRunnable(a.email, a.key, d);
-                    Thread t = new Thread(r);
-                    UPDATE_THREADS.put(d.nickname, t);
-                    t.setName(d.nickname);
-                    t.start();
-                });
-            });
+            startUpdateThreads();
         }
+    }
+
+    private void startUpdateThreads() {
+        LOGGER_DDNS.info("DDNS 正在初始化...");
+        this.CONFIG.accounts.forEach((a) -> {
+            a.domains.forEach((d) -> {
+                //启动域名更新线程
+                Runnable r = new UpdateRunnable(a.email, a.key, d);
+                Thread t = new Thread(r);
+                UPDATE_THREADS.put(d.nickname, t);
+                t.setName(d.nickname);
+                t.start();
+            });
+        });
     }
 
     //初始化内置组件
@@ -131,7 +134,10 @@ public class DDNS {
         private final Domain DOMAIN;
         private final String DOMAIN_NAME;
         private final HashMap<String, String> HEADERS = new HashMap<>();
+        private final Object LOCK;
 
+        private int defaultSleepSconds = 0;
+        private int failedSleepSeconds = 0;
         private String domainIP = null;
         private String localIP = null;
         private String sourceType = null;
@@ -154,12 +160,21 @@ public class DDNS {
                 json = gson.fromJson(conn.execute().body(), CloudflareResponseJson.class);
             } catch (IOException ex) {
                 LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
-                LOGGER_EX.error(ex);
+                LOGGER_EX.error("发生错误",ex);
             }
             DOMAIN_NAME = json.result.name;
             domainIP = json.result.content;
 
             setSourceType();
+
+            failedSleepSeconds = CONFIG.failedSleepSeconds;
+            if (DOMAIN.passiveUpdate) {
+                PassiveUpdate com = (PassiveUpdate) COMPONENTS.get("passiveUpdate");
+                LOCK = com.getLOCK(DOMAIN.passiveUpdateID);
+            } else {
+                defaultSleepSconds = CONFIG.defaultSleepSconds;
+                LOCK = null;
+            }
         }
 
         @Override
@@ -167,6 +182,16 @@ public class DDNS {
             LOGGER_DDNS.info(String.format("域名 %s 的DDNS服务已启动", DOMAIN_NAME));
 
             while (!Thread.currentThread().isInterrupted()) {
+                if (DOMAIN.passiveUpdate) {
+                    LOGGER_DDNS.info(String.format("等待被动更新"));
+                    synchronized (LOCK) {
+                        try {
+                            LOCK.wait();
+                        } catch (InterruptedException ex) {
+                            java.util.logging.Logger.getLogger(DDNS.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
+                }
                 updateDNS();
             }
         }
@@ -194,28 +219,28 @@ public class DDNS {
                         CloudflareResponseJson responseJson = gson.fromJson(conn2.execute().body(), CloudflareResponseJson.class);
 
                         if (responseJson.success) {
-                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, localIP, DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds : DOMAIN.ttl * 4));
+                            LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, localIP, defaultSleepSconds * 10));
                             domainIP = localIP;
-                            sleep(DOMAIN.ttl == 1 ? CONFIG.defaultSleepSconds * 1000 : DOMAIN.ttl * 4 * 1000);
+                            sleep(defaultSleepSconds * 10 * 1000);
                         } else {
                             LOGGER_DDNS.error(String.format("域名 %s 更新失败,将睡眠 %s 秒后重试" + System.lineSeparator()
                                     + "失败原因：" + System.lineSeparator()
                                     + formatErrorMessages(responseJson.errors),
-                                    DOMAIN_NAME, CONFIG.failedSleepSeconds));
-                            sleep(CONFIG.failedSleepSeconds);
+                                    DOMAIN_NAME, failedSleepSeconds));
+                            sleep(failedSleepSeconds);
                         }
                     } else {
-                        LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN_NAME, CONFIG.defaultSleepSconds));
-                        sleep(CONFIG.defaultSleepSconds * 1000);
+                        LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN_NAME, defaultSleepSconds));
+                        sleep(defaultSleepSconds * 1000);
                     }
                 } else {
-                    LOGGER_DDNS.info(String.format("域名 %s 未能获取新IP地址, 将睡眠 %s 秒", DOMAIN_NAME, CONFIG.failedSleepSeconds));
-                    sleep(CONFIG.failedSleepSeconds * 1000);
+                    LOGGER_DDNS.info(String.format("域名 %s 未能获取新IP地址, 将睡眠 %s 秒", DOMAIN_NAME, failedSleepSeconds));
+                    sleep(failedSleepSeconds * 1000);
                 }
             } catch (IOException ex) {
-                LOGGER_DDNS.error(String.format("进程发生致命故障，但未中断，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
-                LOGGER_EX.error(ex);
-                sleep(CONFIG.failedSleepSeconds * 1000);
+                LOGGER_DDNS.error(String.format("进程发生致命故障，但未中断，将在 %s 秒后重试", failedSleepSeconds));
+                LOGGER_EX.error("发生错误",ex);
+                sleep(failedSleepSeconds * 1000);
             }
         }
 
@@ -261,10 +286,10 @@ public class DDNS {
                 Document doc = conn.execute().parse();
                 localIP = doc.getElementById("1").attr("fk");
             } catch (NullPointerException | IOException ex) {
-                LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", CONFIG.failedSleepSeconds));
-                LOGGER_EX.error(ex);
+                LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", failedSleepSeconds));
+                LOGGER_EX.error("发生错误",ex);
                 localIP = null;
-                sleep(CONFIG.failedSleepSeconds * 1000);
+                sleep(failedSleepSeconds * 1000);
             }
         }
 
@@ -279,13 +304,13 @@ public class DDNS {
                 LocalIPJson addr = gson.fromJson(conn.execute().body(), LocalIPJson.class);
                 localIP = addr.ip;
             } catch (IOException ex) {
-                LOGGER_DDNS.error(String.format("服务器 %s 故障，将在 %s 秒后重试", CONFIG.whereGetYourIP, CONFIG.failedSleepSeconds));
-                LOGGER_EX.error(ex);
+                LOGGER_DDNS.error(String.format("服务器 %s 故障，将在 %s 秒后重试", CONFIG.whereGetYourIP, failedSleepSeconds));
+                LOGGER_EX.error("发生错误",ex);
                 localIP = null;
-                sleep(CONFIG.failedSleepSeconds * 1000);
+                sleep(failedSleepSeconds * 1000);
             } catch (IllegalArgumentException ex) {
                 LOGGER_DDNS.fatal(String.format("无效HTTP地址 %s", CONFIG.whereGetYourIP));
-                LOGGER_EX.fatal(ex);
+                LOGGER_EX.fatal("发生错误",ex);
                 System.exit(1);
             }
         }
@@ -299,7 +324,7 @@ public class DDNS {
                 localIP = (String) invo.invokeFunction("getIP", "");
             } catch (FileNotFoundException | NoSuchMethodException | ScriptException ex) {
                 LOGGER_DDNS.error(String.format("无效JavaScript文件 %s", CONFIG.whereGetYourIP));
-                LOGGER_EX.error(ex);
+                LOGGER_EX.error("发生错误",ex);
                 localIP = null;
                 System.exit(1);
             }
