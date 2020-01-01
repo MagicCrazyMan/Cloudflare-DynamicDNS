@@ -52,7 +52,7 @@ public class Main {
     public static void main(String[] args) {
         inputArgs = args;
         CLI(args);
-        if (start == true) {
+        if (start) {
             new DDNS(Configuration.initConfiguration(config, isBaidu)).startDDNS();
         }
     }

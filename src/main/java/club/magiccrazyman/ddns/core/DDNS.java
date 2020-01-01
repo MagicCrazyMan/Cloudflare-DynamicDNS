@@ -82,16 +82,14 @@ public class DDNS {
 
     private void startUpdateThreads() {
         LOGGER_DDNS.info("DDNS 正在初始化...");
-        this.CONFIG.accounts.forEach((a) -> {
-            a.domains.forEach((d) -> {
-                //启动域名更新线程
-                Runnable r = new UpdateRunnable(a.email, a.key, d);
-                Thread t = new Thread(r);
-                UPDATE_THREADS.put(d.nickname, t);
-                t.setName(d.nickname);
-                t.start();
-            });
-        });
+        this.CONFIG.accounts.forEach((a) -> a.domains.forEach((d) -> {
+            //启动域名更新线程
+            Runnable r = new UpdateRunnable(a.email, a.key, d);
+            Thread t = new Thread(r);
+            UPDATE_THREADS.put(d.nickname, t);
+            t.setName(d.nickname);
+            t.start();
+        }));
     }
 
     //初始化内置组件
@@ -101,16 +99,14 @@ public class DDNS {
         ArrayList<Class<? extends ComponentAbstract>> arrs = new ArrayList<>(clazz);
         arrs.forEach((arr) -> {
             try {
-                ComponentAbstract component = (ComponentAbstract) arr.newInstance();
+                ComponentAbstract component =  arr.newInstance();
                 COMPONENTS.put(component.name(), component);
             } catch (InstantiationException | IllegalAccessException ex) {
                 java.util.logging.Logger.getLogger(Command.class.getName()).log(Level.SEVERE, null, ex);
             }
         });
 
-        COMPONENTS.values().forEach((component) -> {
-            component.register(this);
-        });
+        COMPONENTS.values().forEach((component) -> component.register(this));
         isInit = true;
     }
 
@@ -183,7 +179,7 @@ public class DDNS {
 
             while (!Thread.currentThread().isInterrupted()) {
                 if (DOMAIN.passiveUpdate) {
-                    LOGGER_DDNS.info(String.format("等待被动更新"));
+                    LOGGER_DDNS.info("等待被动更新");
                     synchronized (LOCK) {
                         try {
                             LOCK.wait();
@@ -402,11 +398,7 @@ public class DDNS {
     }
 
     public Thread getUpdateThread(String threadName) {
-        if (UPDATE_THREADS.containsKey(threadName)) {
-            return UPDATE_THREADS.get(threadName);
-        } else {
-            return null;
-        }
+        return UPDATE_THREADS.getOrDefault(threadName, null);
     }
 
     public HashMap<String, Thread> getUpdateThreads() {
@@ -414,11 +406,7 @@ public class DDNS {
     }
 
     public ComponentAbstract getComponent(String name) {
-        if (COMPONENTS.containsKey(name)) {
-            return COMPONENTS.get(name);
-        } else {
-            return null;
-        }
+        return COMPONENTS.getOrDefault(name, null);
     }
 
     public HashMap<String, ComponentAbstract> getComponents() {
