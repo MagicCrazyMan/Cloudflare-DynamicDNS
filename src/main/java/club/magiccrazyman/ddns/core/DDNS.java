@@ -189,11 +189,12 @@ public class DDNS {
                         }
                     }
                 }
-                updateDNS();
+                int sleepPeriod = updateDNS();
+                sleep(sleepPeriod);
             }
         }
 
-        private void updateDNS() {
+        private int updateDNS() {
             try {
                 setLocalIP();
 
@@ -218,26 +219,26 @@ public class DDNS {
                         if (responseJson.success) {
                             LOGGER_DDNS.info(String.format("域名 %s 已更新为 %s ,将睡眠 %s 秒", DOMAIN_NAME, localIP, defaultSleepSconds * 10));
                             domainIP = localIP;
-                            sleep(defaultSleepSconds * 10 * 1000);
+                            return defaultSleepSconds * 10 * 1000;
                         } else {
                             LOGGER_DDNS.error(String.format("域名 %s 更新失败,将睡眠 %s 秒后重试" + System.lineSeparator()
                                     + "失败原因：" + System.lineSeparator()
                                     + formatErrorMessages(responseJson.errors),
                                     DOMAIN_NAME, failedSleepSeconds));
-                            sleep(failedSleepSeconds);
+                            return failedSleepSeconds * 1000;
                         }
                     } else {
                         LOGGER_DDNS.info(String.format("域名 %s 未发生变化, 将睡眠 %s 秒", DOMAIN_NAME, defaultSleepSconds));
-                        sleep(defaultSleepSconds * 1000);
+                        return defaultSleepSconds * 1000;
                     }
                 } else {
                     LOGGER_DDNS.info(String.format("域名 %s 未能获取新IP地址, 将睡眠 %s 秒", DOMAIN_NAME, failedSleepSeconds));
-                    sleep(failedSleepSeconds * 1000);
+                    return failedSleepSeconds * 1000;
                 }
             } catch (IOException ex) {
                 LOGGER_DDNS.error(String.format("进程发生致命故障，但未中断，将在 %s 秒后重试", failedSleepSeconds));
                 LOGGER_EX.error("发生错误",ex);
-                sleep(failedSleepSeconds * 1000);
+                return failedSleepSeconds * 1000;
             }
         }
 
