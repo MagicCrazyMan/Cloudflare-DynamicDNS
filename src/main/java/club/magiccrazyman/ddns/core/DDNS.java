@@ -155,8 +155,9 @@ public class DDNS {
             try {
                 json = gson.fromJson(conn.execute().body(), CloudflareResponseJson.class);
             } catch (IOException ex) {
-                LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接");
+                LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接，应用已关闭");
                 LOGGER_EX.error("发生错误",ex);
+                System.exit(1);
             }
             DOMAIN_NAME = json.result.name;
             domainIP = json.result.content;
