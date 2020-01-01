@@ -78,7 +78,7 @@ public class DDNS {
      * Start service
      */
     public void startDDNS() {
-        if (CONFIG != null && isInit) {
+        if (isInit) {
             //启动组件
             startComponents();
             startUpdateThreads();
@@ -87,14 +87,16 @@ public class DDNS {
 
     private void startUpdateThreads() {
         LOGGER_DDNS.info("DDNS 正在初始化...");
-        this.CONFIG.accounts.forEach((a) -> a.domains.forEach((d) -> {
-            //启动域名更新线程
-            Runnable r = new UpdateRunnable(a.email, a.key, d);
-            Thread t = new Thread(r);
-            UPDATE_THREADS.put(d.nickname, t);
-            t.setName(d.nickname);
-            t.start();
-        }));
+        if (CONFIG != null) {
+            this.CONFIG.accounts.forEach((a) -> a.domains.forEach((d) -> {
+                //启动域名更新线程
+                Runnable r = new UpdateRunnable(a.email, a.key, d);
+                Thread t = new Thread(r);
+                UPDATE_THREADS.put(d.nickname, t);
+                t.setName(d.nickname);
+                t.start();
+            }));
+        }
     }
 
     //初始化内置组件
