@@ -43,6 +43,7 @@ public class Main {
     private static String config = "config.json";
     private static boolean isBaidu = false;
     private static boolean start = true;
+    private static boolean debug = false;
 
     public static String[] inputArgs = null;
 
@@ -51,13 +52,13 @@ public class Main {
      */
     public static void main(String[] args) {
         inputArgs = args;
-        CLI(args);
-        if (start) {
-            new DDNS(Configuration.initConfiguration(config, isBaidu)).startDDNS();
+        DDNS ddns = CLI(args);
+        if (ddns != null) {
+            ddns.startDDNS();
         }
     }
 
-    private static void CLI(String[] args) {
+    private static DDNS CLI(String[] args) {
         try {
 
             Options options = new Options();
@@ -83,6 +84,11 @@ public class Main {
                     .desc("使用百度(www.baidu.com)查询网络IP" + System.lineSeparator()
                             + "不建议使用，有可能存在泄漏IP的风险，建议仅在无额外服务器可进行IP查询的情况下使用"
                     )
+                    .build());
+            options.addOption(Option.builder("d")
+                    .hasArg(false)
+                    .desc("组件调试模式（调试模式下将会启动一个无域名更新线程的服务）")
+                    .longOpt("debug")
                     .build());
             options.addOption(Option.builder("j")
                     .hasArg(false)
@@ -129,12 +135,24 @@ public class Main {
                     case "b":
                         isBaidu = true;
                         break;
+                    case "d":
+                        debug = true;
+                        break;
                     default:
                         System.out.println("无效命令：" + op.getOpt());
                 }
             }
+
+            if(debug){
+                return new DDNS(null);
+            } else if (start){
+                return new DDNS(Configuration.initConfiguration(config, isBaidu));
+            } else {
+                return null;
+            }
         } catch (ParseException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            return null;
         }
     }
 }

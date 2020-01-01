@@ -19,12 +19,14 @@ package club.magiccrazyman.ddns.core;
 import club.magiccrazyman.ddns.components.ComponentAbstract;
 import club.magiccrazyman.ddns.core.Configuration.Account.Domain;
 import club.magiccrazyman.ddns.components.command.Command;
-import club.magiccrazyman.ddns.components.passiveupdate.PassiveUpdate;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
@@ -33,6 +35,10 @@ import javax.script.Invocable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
@@ -43,7 +49,6 @@ import org.jsoup.nodes.Document;
 import org.reflections.Reflections;
 
 /**
- *
  * @author Magic Crazy Man
  */
 public class DDNS {
@@ -101,7 +106,7 @@ public class DDNS {
         ArrayList<Class<? extends ComponentAbstract>> arrs = new ArrayList<>(clazz);
         arrs.forEach((arr) -> {
             try {
-                ComponentAbstract component =  arr.newInstance();
+                ComponentAbstract component = arr.newInstance();
                 COMPONENTS.put(component.name(), component);
             } catch (InstantiationException | IllegalAccessException ex) {
                 java.util.logging.Logger.getLogger(Command.class.getName()).log(Level.SEVERE, null, ex);
@@ -131,7 +136,8 @@ public class DDNS {
         private final Domain DOMAIN;
         private final String DOMAIN_NAME;
         private final HashMap<String, String> HEADERS = new HashMap<>();
-        private final Object LOCK;
+        private final Object passiveUpdateLock;
+        private final String passiveUpdateID;
 
         private int defaultSleepSconds = 0;
         private int failedSleepSeconds = 0;
@@ -157,7 +163,7 @@ public class DDNS {
                 json = gson.fromJson(conn.execute().body(), CloudflareResponseJson.class);
             } catch (IOException ex) {
                 LOGGER_DDNS.error("无法从Cloudflare获取信息,请确认输入信息正确并且网络已连接，应用已关闭");
-                LOGGER_EX.error("发生错误",ex);
+                LOGGER_EX.error("发生错误", ex);
                 System.exit(1);
             }
             DOMAIN_NAME = json.result.name;
@@ -167,11 +173,12 @@ public class DDNS {
 
             failedSleepSeconds = CONFIG.failedSleepSeconds;
             if (DOMAIN.passiveUpdate) {
-                PassiveUpdate com = (PassiveUpdate) COMPONENTS.get("passiveUpdate");
-                LOCK = com.getLOCK(DOMAIN.passiveUpdateID);
+                passiveUpdateLock = new Object();
+                passiveUpdateID = DOMAIN.passiveUpdateID;
             } else {
                 defaultSleepSconds = CONFIG.defaultSleepSconds;
-                LOCK = null;
+                passiveUpdateLock = null;
+                passiveUpdateID = null;
             }
         }
 
@@ -179,19 +186,25 @@ public class DDNS {
         public void run() {
             LOGGER_DDNS.info(String.format("域名 %s 的DDNS服务已启动", DOMAIN_NAME));
 
+            if(DOMAIN.passiveUpdate){
+                startPassiveUpdateSever();;
+            }
+
             while (!Thread.currentThread().isInterrupted()) {
                 if (DOMAIN.passiveUpdate) {
                     LOGGER_DDNS.info("等待被动更新");
-                    synchronized (LOCK) {
+                    synchronized (passiveUpdateLock) {
                         try {
-                            LOCK.wait();
-                        } catch (InterruptedException ex) {
-                            java.util.logging.Logger.getLogger(DDNS.class.getName()).log(Level.SEVERE, null, ex);
+                            passiveUpdateLock.wait();
+                            int sleepPeriod = updateDNS();
+                            sleep(sleepPeriod);
+                        } catch (InterruptedException ignored) {
                         }
                     }
+                } else {
+                    int sleepPeriod = updateDNS();
+                    sleep(sleepPeriod);
                 }
-                int sleepPeriod = updateDNS();
-                sleep(sleepPeriod);
             }
         }
 
@@ -223,8 +236,8 @@ public class DDNS {
                             return defaultSleepSconds * 10 * 1000;
                         } else {
                             LOGGER_DDNS.error(String.format("域名 %s 更新失败,将睡眠 %s 秒后重试" + System.lineSeparator()
-                                    + "失败原因：" + System.lineSeparator()
-                                    + formatErrorMessages(responseJson.errors),
+                                            + "失败原因：" + System.lineSeparator()
+                                            + formatErrorMessages(responseJson.errors),
                                     DOMAIN_NAME, failedSleepSeconds));
                             return failedSleepSeconds * 1000;
                         }
@@ -238,7 +251,7 @@ public class DDNS {
                 }
             } catch (IOException ex) {
                 LOGGER_DDNS.error(String.format("进程发生致命故障，但未中断，将在 %s 秒后重试", failedSleepSeconds));
-                LOGGER_EX.error("发生错误",ex);
+                LOGGER_EX.error("发生错误", ex);
                 return failedSleepSeconds * 1000;
             }
         }
@@ -250,7 +263,7 @@ public class DDNS {
                     getIPviaBaidu();
                     break;
                 case "passive":
-                    getIPviaPassive();
+                    //passiveUpdate will update the local ip immediately when reomte server send a new ip back
                     break;
                 case "http":
                     getIPviaHtttp();
@@ -286,7 +299,7 @@ public class DDNS {
                 localIP = doc.getElementById("1").attr("fk");
             } catch (NullPointerException | IOException ex) {
                 LOGGER_DDNS.error(String.format("无法连接至百度，将在 %s 秒后重试", failedSleepSeconds));
-                LOGGER_EX.error("发生错误",ex);
+                LOGGER_EX.error("发生错误", ex);
                 localIP = null;
                 sleep(failedSleepSeconds * 1000);
             }
@@ -304,12 +317,12 @@ public class DDNS {
                 localIP = addr.ip;
             } catch (IOException ex) {
                 LOGGER_DDNS.error(String.format("服务器 %s 故障，将在 %s 秒后重试", CONFIG.whereGetYourIP, failedSleepSeconds));
-                LOGGER_EX.error("发生错误",ex);
+                LOGGER_EX.error("发生错误", ex);
                 localIP = null;
                 sleep(failedSleepSeconds * 1000);
             } catch (IllegalArgumentException ex) {
                 LOGGER_DDNS.fatal(String.format("无效HTTP地址 %s", CONFIG.whereGetYourIP));
-                LOGGER_EX.fatal("发生错误",ex);
+                LOGGER_EX.fatal("发生错误", ex);
                 System.exit(1);
             }
         }
@@ -323,15 +336,23 @@ public class DDNS {
                 localIP = (String) invo.invokeFunction("getIP", "");
             } catch (FileNotFoundException | NoSuchMethodException | ScriptException ex) {
                 LOGGER_DDNS.error(String.format("无效JavaScript文件 %s", CONFIG.whereGetYourIP));
-                LOGGER_EX.error("发生错误",ex);
+                LOGGER_EX.error("发生错误", ex);
                 localIP = null;
                 System.exit(1);
             }
         }
 
-        private void getIPviaPassive() {
-            PassiveUpdate com = (PassiveUpdate) COMPONENTS.get("passiveUpdate");
-            localIP = com.getIP(DOMAIN.passiveUpdateID);
+        private void startPassiveUpdateSever() {
+            try {
+                HttpServer server = HttpServer.create(new InetSocketAddress(CONFIG.passiveUpdatePort), 0);
+                server.createContext("/ip", new PassiveUpdateServer());
+                server.setExecutor(null); // creates a default executor
+                server.start();
+            } catch (IOException ex) {
+                LOGGER_EX.fatal("发生错误,进程已终止", ex);
+                java.util.logging.Logger.getLogger(UpdateRunnable.class.getName()).log(Level.SEVERE, null, ex);
+                System.exit(1);
+            }
         }
 
         private void sleep(long time) {
@@ -397,6 +418,36 @@ public class DDNS {
         class LocalIPJson {
 
             String ip;
+        }
+
+        class PassiveUpdateServer implements HttpHandler {
+
+            @Override
+            public void handle(HttpExchange t) throws IOException {
+                try (OutputStream os = t.getResponseBody()) {
+
+                    String idIn = t.getRequestHeaders().getFirst("id");
+                    if (passiveUpdateID.equals(idIn)) {
+                        String ip = t.getRequestHeaders().getFirst("ip");
+                        if (!ip.isEmpty()) {
+                            if (!ip.equals(localIP)) {
+                                localIP = ip;
+                                LOGGER_DDNS.info(String.format("辨识号 %s 所指向域名被动更新为 %s", idIn, ip));
+                                synchronized (passiveUpdateLock) {
+                                    passiveUpdateLock.notify();
+                                }
+                            }
+                            String response = "successed " + ip;
+                            t.sendResponseHeaders(200, response.length());
+                            os.write(response.getBytes());
+                        } else {
+                            String response = "failed";
+                            t.sendResponseHeaders(200, response.length());
+                            os.write(response.getBytes());
+                        }
+                    }
+                }
+            }
         }
     }
 
