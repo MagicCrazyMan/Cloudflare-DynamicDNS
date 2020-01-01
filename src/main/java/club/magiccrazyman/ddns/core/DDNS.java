@@ -67,6 +67,7 @@ public class DDNS {
 
         initInternalComponents();
         initExternalComponents();
+        isInit = true;
     }
 
     /**
@@ -77,7 +78,7 @@ public class DDNS {
             //启动组件
             startComponents();
             startUpdateThreads();
-            isInit = true;
+
         }
     }
 
