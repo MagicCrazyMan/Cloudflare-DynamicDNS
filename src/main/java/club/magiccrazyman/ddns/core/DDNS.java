@@ -69,7 +69,6 @@ public class DDNS {
      */
     public DDNS(Configuration config) {
         CONFIG = config;
-
         initInternalComponents();
         initExternalComponents();
         isInit = true;
@@ -83,7 +82,6 @@ public class DDNS {
             //启动组件
             startComponents();
             startUpdateThreads();
-
         }
     }
 
@@ -210,22 +208,22 @@ public class DDNS {
 
         private int updateDNS() {
             try {
-                setLocalIP();
+                getLocalIP();
 
                 if (localIP != null && domainIP != null) {
                     if (!localIP.equals(domainIP)) {
                         Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-                        UpdateJson updateJson = new UpdateJson();
-                        updateJson.type = DOMAIN.type;
-                        updateJson.name = DOMAIN_NAME;
-                        updateJson.content = localIP;
-                        updateJson.ttl = DOMAIN.ttl;
-                        updateJson.proxied = DOMAIN.proixed;
+                        CloudflareUpdateJson cloudflareUpdateJson = new CloudflareUpdateJson();
+                        cloudflareUpdateJson.type = DOMAIN.type;
+                        cloudflareUpdateJson.name = DOMAIN_NAME;
+                        cloudflareUpdateJson.content = localIP;
+                        cloudflareUpdateJson.ttl = DOMAIN.ttl;
+                        cloudflareUpdateJson.proxied = DOMAIN.proixed;
 
                         String url = String.format("https://api.cloudflare.com/client/v4/zones/%s/dns_records/%s", DOMAIN.zone, DOMAIN.identifier);
                         HttpConnection conn2 = (HttpConnection) Jsoup.connect(url);
                         conn2.headers(HEADERS);
-                        conn2.requestBody(gson.toJson(updateJson));
+                        conn2.requestBody(gson.toJson(cloudflareUpdateJson));
                         conn2.ignoreContentType(true);
                         conn2.method(Connection.Method.PUT);
                         CloudflareResponseJson responseJson = gson.fromJson(conn2.execute().body(), CloudflareResponseJson.class);
@@ -256,7 +254,7 @@ public class DDNS {
             }
         }
 
-        private void setLocalIP() {
+        private void getLocalIP() {
 
             switch (sourceType) {
                 case "baidu":
@@ -374,7 +372,7 @@ public class DDNS {
             return builder.toString();
         }
 
-        class UpdateJson {
+        class CloudflareUpdateJson {
 
             String type;
             String name;
