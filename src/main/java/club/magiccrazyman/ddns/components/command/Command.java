@@ -46,6 +46,7 @@ public class Command extends ComponentAbstract {
         DDNS = ddns;
         initInternalCommand();
         initExternalCommand();
+        isInit = true;
     }
 
     @Override
@@ -96,7 +97,6 @@ public class Command extends ComponentAbstract {
         COMMANDS.values().forEach((command) -> {
             command.register(this);
         });
-        isInit = true;
     }
 
     //初始化外部命令

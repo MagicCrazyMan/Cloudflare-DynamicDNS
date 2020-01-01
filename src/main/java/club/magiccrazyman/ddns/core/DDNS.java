@@ -77,6 +77,7 @@ public class DDNS {
             //启动组件
             startComponents();
             startUpdateThreads();
+            isInit = true;
         }
     }
 
@@ -107,7 +108,6 @@ public class DDNS {
         });
 
         COMPONENTS.values().forEach((component) -> component.register(this));
-        isInit = true;
     }
 
     //初始化外部组件
