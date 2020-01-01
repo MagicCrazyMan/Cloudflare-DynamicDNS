@@ -1,0 +1,57 @@
+<Configuration status="WARN" monitorInterval="300">
+    <properties>
+        <property name="LOG_HOME">.</property>
+        <property name="FILE_NAME_SERVER">ddns</property>
+    </properties>
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout>
+                <Pattern>[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] - %msg%n</Pattern>
+                <Charset>UTF-8</Charset>  
+            </PatternLayout>
+        </Console>
+        <RollingFile createOnDemand="true">
+            <name>ddns</name>
+            <fileName>${LOG_HOME}/${FILE_NAME_SERVER}.log</fileName>
+            <filePattern>${LOG_HOME}/${FILE_NAME_SERVER}-$${date:yyyy-MM}/${FILE_NAME_SERVER}-%d{yyyy-MM-dd HH}-%i.log</filePattern>
+            <PatternLayout>
+                <Pattern>[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] - %msg%n</Pattern>
+                <Charset>UTF-8</Charset>  
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <TimeBasedTriggeringPolicy interval="24" />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="20" />
+        </RollingFile>
+        <RollingFile createOnDemand="true">
+            <name>exception</name>
+            <fileName>${LOG_HOME}/${FILE_NAME_SERVER}-error.log</fileName>
+            <filePattern>${LOG_HOME}/${FILE_NAME_SERVER}-$${date:yyyy-MM}/${FILE_NAME_SERVER}-%d{yyyy-MM-dd HH}-%i-error.log</filePattern>
+            <PatternLayout>
+                <Pattern>[%d{HH:mm:ss.SSS}][%t][%-5level][%logger{36}] - %msg%n</Pattern>
+                <Charset>UTF-8</Charset>  
+            </PatternLayout>
+            <Policies>
+                <OnStartupTriggeringPolicy />
+                <TimeBasedTriggeringPolicy interval="24" />
+                <SizeBasedTriggeringPolicy size="10 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="20" />
+        </RollingFile>
+    </Appenders>
+ 
+    <Loggers>
+        <Logger name="ddns" level="trace" additivity="false">
+            <AppenderRef ref="ddns" />
+            <AppenderRef ref="Console" />
+        </Logger>
+        <Logger name="exception" level="trace" additivity="false">
+            <AppenderRef ref="exception" />
+        </Logger>
+        <Root level="error">
+            <AppenderRef ref="Console" />
+        </Root>
+    </Loggers>
+</Configuration>
